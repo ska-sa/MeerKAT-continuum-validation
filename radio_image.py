@@ -9,12 +9,28 @@ from astropy.utils.exceptions import AstropyWarning
 from astropy.wcs import WCS
 
 from functions import remove_extn, get_pixel_area
-
+import subprocess
+import shlex
 
 # ignore annoying astropy warnings and set my own obvious warning output
 warnings.simplefilter('ignore', category=AstropyWarning)
 cf = currentframe()
 WARN = '\n\033[91mWARNING: \033[0m' + getframeinfo(cf).filename
+
+
+def execute(system_command, **kwargs):
+    """Execute a system command, printing STDOUT and STDERR.
+
+    Source: https://stackoverflow.com/a/4417735/2063031
+    """
+    popen = subprocess.Popen(
+        shlex.split(system_command),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True,
+        **kwargs)
+    for stdout_line in iter(popen.stdout.readline, ""):
+        print(stdout_line.strip())
 
 
 class radio_image(object):
@@ -225,7 +241,7 @@ class radio_image(object):
                                                                  self.filepath)
             print("Running BANE using following command:")
             print(command)
-            os.system(command)
+            execute(command)
         else:
             print("'{0}' already exists. Skipping BANE.".format(self.rms_map))
 
@@ -256,8 +272,8 @@ class radio_image(object):
             print("--------------------------------")
 
             # Run Aegean source finder to produce catalogue of image
-            command = 'aegean --cores={0} --noise={1} --background={2} --table={3}\
-            '.format(ncores, self.rms_map, self.bkg, self.cat_name)
+            command = 'aegean --cores={0} --noise={1} --background={2}'\
+                      ' --table={3}'.format(ncores, self.rms_map, self.bkg, self.cat_name)
 
             # Also write ds9 region file and island fits file when used wants verbose output
             if self.verbose:
@@ -267,7 +283,7 @@ class radio_image(object):
             command += " {0} {1}".format(params, self.filepath)
             print("Running Aegean with following command:")
             print(command)
-            os.system(command)
+            execute(command)
 
             # Print error message when no sources are found and catalogue not created.
             if not os.path.exists(self.cat_comp):
@@ -289,7 +305,7 @@ class radio_image(object):
                                                                      self.model)
                 print("Running AeRes for residual and model images with following command:")
                 print(command)
-                os.system(command)
+                execute(command)
             else:
                 print("'{0}' already exists. Skipping AeRes.".format(self.residual))
 
