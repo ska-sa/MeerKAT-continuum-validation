@@ -220,7 +220,7 @@ class report(object):
 
     def write_html_img_table(self, img):
 
-        """Write an observations and image and catalogue report tables derived from fits image and header.
+        """Write an observations and image and catalogue report tables derived from FITS image and header.
 
         Arguments:
         ----------
@@ -295,7 +295,7 @@ class report(object):
 
     def write_html_cat_table(self):
 
-        """Write an observations and image and catalogue report tables derived from fits
+        """Write an observations and image and catalogue report tables derived from FITS
         image, header and catalogue."""
 
         flux_type = 'integrated'
@@ -382,14 +382,14 @@ class report(object):
                 self.metric_source.pop(metric)
                 self.metric_level.pop(metric)
             else:
-                # flux ratio within 5/10%?
+                # Flux ratio within 5/10%?
                 if metric == 'Flux Ratio':
                     val = np.abs(self.metric_val[metric]-1)
                     good_condition = val < 0.05
                     uncertain_condition = val < 0.1
                     self.metric_source[metric] = 'Median flux density ratio [ASKAP / {0}]'.format(
                         self.metric_source[metric])
-                # uncertainty on flux ratio less than 10/20%?
+                # Uncertainty on flux ratio less than 10/20%?
                 elif metric == 'Flux Ratio Uncertainty':
                     good_condition = self.metric_val[metric] < 0.1
                     uncertain_condition = self.metric_val[metric] < 0.2
@@ -397,13 +397,13 @@ class report(object):
                     '[ASKAP / {0}]'.format(self.metric_source[metric])
                     self.metric_source[metric] += ' (estimated from median absolute deviation '
                     'from median)'
-                # positional offset < 1/5 arcsec
+                # Positional offset < 1/5 arcsec
                 elif metric == 'Positional Offset':
                     good_condition = self.metric_val[metric] < 1
                     uncertain_condition = self.metric_val[metric] < 5
                     self.metric_source[metric] = 'Median positional offset (arcsec) '
                     '[ASKAP-{0}]'.format(self.metric_source[metric])
-                # uncertainty on positional offset < 1/5 arcsec
+                # Uncertainty on positional offset < 1/5 arcsec
                 elif metric == 'Positional Offset Uncertainty':
                     good_condition = self.metric_val[metric] < 5
                     uncertain_condition = self.metric_val[metric] < 10
@@ -411,12 +411,12 @@ class report(object):
                     '[ASKAP-{0}]'.format(self.metric_source[metric])
                     self.metric_source[metric] += ' (estimated from median absolute deviation '
                     'from median)'
-                # reduced chi-squared of source counts < 3/50?
+                # Reduced chi-squared of source counts < 3/50?
                 elif metric == 'Source Counts Reduced Chi-squared':
                     good_condition = self.metric_val[metric] < 3
                     uncertain_condition = self.metric_val[metric] < 50
                     self.metric_source[metric] = 'Reduced chi-squared of source counts'
-                # resolved fraction of sources between 5-20%?
+                # Resolved fraction of sources between 5-20%?
                 elif metric == 'Resolved Fraction':
                     cond1 = self.metric_val[metric] > 0.05
                     cond2 = self.metric_val[metric] < 0.2
@@ -424,7 +424,7 @@ class report(object):
                     uncertain_condition = self.metric_val[metric] < 0.3
                     self.metric_source[metric] = 'Fraction of sources resolved according to '
                     'int/peak flux densities'
-                # spectral index less than 0.2 away from -0.8?
+                # Spectral index less than 0.2 away from -0.8?
                 elif metric == 'Spectral Index':
                     val = np.abs(self.metric_val[metric]+0.8)
                     good_condition = val < 0.2
@@ -434,12 +434,12 @@ class report(object):
                     good_condition = self.metric_val[metric] < 100
                     uncertain_condition = self.metric_val[metric] < 500
                     self.metric_source[metric] = 'Median image R.M.S. (uJy) from noise map'
-                # if unknown metric, set it to 3 (bad)
+                # If unknown metric, set it to 3 (bad)
                 else:
                     good_condition = False
                     uncertain_condition = False
 
-                # assign level to metric
+                # Assign level to metric
                 self.metric_level[metric] = self.get_metric_level(good_condition,
                                                                   uncertain_condition)
 
@@ -509,10 +509,10 @@ class report(object):
             """.format(self.cat.name, self.metric_source['Flux Ratio'],
                        self.metric_source['Positional Offset']))
 
-        # assign levels to each metric
+        # Assign levels to each metric
         self.assign_metric_levels()
 
-        # flag if in-band spectral indices not derived
+        # Flag if in-band spectral indices not derived
         spec_index = False
         if 'Spectral Index' in self.metric_val:
             spec_index = True
@@ -607,7 +607,7 @@ class report(object):
         html : string
             The same text readable as html."""
 
-        # this will allow everything between $$ to be generated as LaTeX
+        # This will allow everything between $$ to be generated as LaTeX
         html = """
                     <script type="text/x-mathjax-config">
                       MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
@@ -619,7 +619,7 @@ class report(object):
 
                     """
 
-        # write a newline / break for each '\n' in string
+        # Write a newline / break for each '\n' in string
         for line in text.split('\n'):
             html += line + '<br>'
 
@@ -666,7 +666,7 @@ class report(object):
         if usePeak:
             xaxis = peak
 
-        # plot the int/peak flux ratio
+        # Plot the int/peak flux ratio
         fig = plt.figure(**self.fig_size)
         title = "{0} int/peak flux ratio".format(self.cat.name)
 
@@ -690,12 +690,12 @@ class report(object):
         else:
             filename = ''
 
-        # get non-nan data shared between each used axis as a numpy array
+        # Get non-nan data shared between each used axis as a numpy array
         x, y, c, indices = self.shared_indices(xaxis, yaxis=ratio)
         plt.loglog()
         plt.gca().grid(b=True, which='minor', color='w', linewidth=0.5)
 
-        # hack to overlay resolved sources in red
+        # Hack to overlay resolved sources in red
         xres, yres = xaxis[self.cat.resolved], ratio[self.cat.resolved]
         markers = self.markers.copy()
         markers['color'] = 'r'
@@ -703,18 +703,18 @@ class report(object):
         data, = plt.plot(xres, yres, 'o', zorder=50, **markers)
         leg_labels = ['Resolved', 'Unresolved']
 
-        # derive the statistics of y and store in string
+        # Derive the statistics of y and store in string
         ymed, ymean, ystd, yerr, ymad = get_stats(ratio)
         txt = r'$\widetilde{Ratio}$: %.2f' % ymed + '\n'
         txt += r'$\overline{Ratio}$: %.2f' % ymean + '\n'
         txt += r'$\sigma_{Ratio}$: %.2f' % ystd + '\n'
         txt += r'$\sigma_{\overline{Ratio}}$: %.2f' % yerr
 
-        # store median int/peak flux ratio and write to report table
+        # Store median int/peak flux ratio and write to report table
         self.int_peak_ratio = ymed
         self.html.write('<td>{0:.2f}<br>'.format(ymed))
 
-        # plot the int/peak flux ratio
+        # Plot the int/peak flux ratio
         self.plot(x,
                   y=y,
                   c=c,
@@ -745,42 +745,42 @@ class report(object):
         Keyword arguments:
         ------------------
         rms_map : astropy.io.fits
-            A fits image of the local rms in Jy.
+            A FITS image of the local rms in Jy.
         solid_ang : float
             A fixed solid angle over which the source counts are computed. Only used when
             rms_map is None.
         write : bool
             Write the source counts to file."""
 
-        # derive file names based on user input
+        # Derive file names based on user input
         filename = 'screen'
         counts_file = '{0}_source_counts.csv'.format(self.cat.basename)
         if self.plot_to != 'screen':
             filename = '{0}/{1}_source_counts.{2}'.format(self.figDir, self.cat.name, self.plot_to)
-        # read the log of the source counts from Norris+11 from same directory of this script
+        # Read the log of the source counts from Norris+11 from same directory of this script
         df_Norris = pd.read_table('{0}/all_counts.txt'.format(self.main_dir), sep=' ')
         x = df_Norris['S']-3  # convert from log of flux in mJy to log of flux in Jy
         y = df_Norris['Counts']
         yerr = (df_Norris['ErrDown'], df_Norris['ErrUp'])
 
-        # fit 6th degree polynomial to Norris+11 data
+        # Fit 6th degree polynomial to Norris+11 data
         deg = 6
         poly_paras = np.polyfit(x, y, deg)
         f = np.poly1d(poly_paras)
         xlin = np.linspace(min(x)*1.2, max(x)*1.2)
         ylin = f(xlin)
 
-        # perform source counts if not already written to file or user specifies to re-do
+        # Perform source counts if not already written to file or user specifies to re-do
         if not os.path.exists(counts_file) or self.redo:
 
-            # warn user if they haven't input an rms map or fixed solid angle
+            # Warn user if they haven't input an rms map or fixed solid angle
             if rms_map is None and solid_ang == 0:
                 warnings.warn_explicit("You must input a fixed solid angle or an rms map to"
                                        "compute the source counts!\n", UserWarning, WARN,
                                        cf.f_lineno)
                 return
 
-            # get the number of bins from the user
+            # Get the number of bins from the user
             nbins = self.src_cnt_bins
             print("Deriving source counts for {0} using {1} bins.".format(self.cat.name, nbins))
 
@@ -805,16 +805,16 @@ class report(object):
             else:
                 total_area = 0
 
-            # add one more bin and then discard it, since this is dominated by the
-            # few brightest sources
-            # we also add one more to the bins since there's one more bin edge
+            # Add one more bin and then discard it, since this is dominated by the
+            # few brightest sources.
+            # We also add one more to the bins since there's one more bin edge
             # than number of bins
             edges = np.percentile(fluxes, np.linspace(0, 100, nbins+2))
             dN, edges, patches = plt.hist(fluxes, bins=edges)
             dN = dN[:-1]
             edges = edges[:-1]
 
-            # derive the lower and upper edges and dS
+            # Derive the lower and upper edges and dS
             lower = edges[:-1]
             upper = edges[1:]
             dS = upper-lower
@@ -822,7 +822,7 @@ class report(object):
             solid_angs = np.zeros(len(dN))
 
             for i in range(len(dN)):
-                # derive the mean flux from all fluxes in current bin
+                # Derive the mean flux from all fluxes in current bin
                 indices = (fluxes > lower[i]) & (fluxes < upper[i])
                 S[i] = np.mean(fluxes[indices])
 
@@ -830,11 +830,11 @@ class report(object):
                 if rms_map is not None:
                     solid_angs[i] = get_pixel_area(rms_map, flux=S[i]/self.cat.SNR, w=w)[1]
 
-                # otherwise use the fixed value passed in
+                # Otherwise use the fixed value passed in
                 else:
                     solid_angs[i] = solid_ang
 
-            # compute the differential Euclidean source counts and uncertanties in linear space
+            # Compute the differential Euclidean source counts and uncertanties in linear space
             counts = (S**2.5)*dN/dS/solid_angs
             err = (S**2.5)*np.sqrt(dN)/dS/solid_angs
 
@@ -848,7 +848,7 @@ class report(object):
             df['logErrUp'] = np.log10(counts+err) - np.log10(counts)
             df['logErrDown'] = np.abs(np.log10(counts-err) - np.log10(counts))
 
-            # remove all bins with less than 10% of total solid angle
+            # Remove all bins with less than 10% of total solid angle
             bad_bins = df['area'] / total_area < 0.1
             output = ['Solid angle for bin S={0:.2f} mJy less than 10% of total image. '
                       'Removing bin.'.format(S) for S in S[np.where(bad_bins)]*1e3]
@@ -862,17 +862,17 @@ class report(object):
                     print("Writing source counts to '{0}'.".format(counts_file))
                 df.to_csv(counts_file, index=False)
 
-        # otherwise simply read in source counts from file
+        # Otherwise simply read in source counts from file
         else:
             print("File '{0}' already exists. Reading source counts from this file.".format(
                 counts_file))
             df = pd.read_csv(counts_file)
 
-        # create a figure for the source counts
+        # Create a figure for the source counts
         plt.close()
         fig = plt.figure(**self.fig_size)
         title = '{0} 1.4 GHz source counts'.format(self.cat.name)  # self.cat.freq[self.cat.name])
-        # write axes using unicode (for html) or LaTeX
+        # Write axes using unicode (for html) or LaTeX
         if self.plot_to == 'html':
             ylabel = "log\u2081\u2080 S\u00B2\u22C5\u2075 dN/dS [Jy\u00B9\u22C5\u2075 "
             "sr\u207B\u00B9]"
@@ -881,16 +881,16 @@ class report(object):
             ylabel = r"$\log_{10}$ S$^{2.5}$ dN/dS [Jy$^{1.5}$ sr$^{-1}$]"
             xlabel = r"$\log_{10}$ S [Jy]"
 
-        # for html plots, add labels for the bin centre, count and area for every data point
+        # For html plots, add labels for the bin centre, count and area for every data point
         labels = ['S: {0:.2f} mJy, dN: {1:.0f}, Area: {2:.2f} deg\u00B2'.format(bin, count, area)
                   for bin, count, area in zip(df['S']*1e3, df['dN'], df['area'])]
 
-        # derive the square of the residuals (chi squared), and their sum
-        # divided by the number of data points (reduced chi squared)
+        # Derive the square of the residuals (chi squared), and their sum
+        # Divided by the number of data points (reduced chi squared)
         chi = ((df['logCounts']-f(df['logS']))/df['logErrDown'])**2
         red_chi_sq = np.sum(chi)/len(df)
 
-        # store reduced chi squared value
+        # Store reduced chi squared value
         self.sc_red_chi_sq = red_chi_sq
 
         # Plot Norris+11 data
@@ -899,16 +899,16 @@ class report(object):
         txt = ''
         if self.plot_to == 'html':
             txt += 'Data from <a href="http://adsabs.harvard.edu/abs/2011PASA...28..215N">'\
-            'Norris+11</a>'
+                'Norris+11</a>'
             txt += ' (updated from <a href="http://adsabs.harvard.edu/abs/2003AJ....125..465H"'\
-            '>Hopkins+03</a>)\n'
+                '>Hopkins+03</a>)\n'
         txt += r'$\chi^2_{red}$: %.2f' % red_chi_sq
 
         # Legend labels for the Norris data and line, and the ASKAP data
         xlab = 'Norris+11'
         leg_labels = [xlab, '{0}th degree polynomial fit to {1}'.format(deg, xlab), self.cat.name]
 
-        # write reduced chi squared to report table
+        # Write reduced chi squared to report table
         self.html.write('</td><td>{0:.2f}<br>'.format(red_chi_sq))
 
         # Plot ASKAP data on top of Norris+11 data
@@ -1074,7 +1074,7 @@ class report(object):
         numpy.array
         pandas.Series"""
 
-        # convert input to numpy array
+        # Convert input to numpy array
         if type(axis) is str:
             axis = self.cat.df[axis].values
         elif axis is pd.Series:
@@ -1115,12 +1115,12 @@ class report(object):
         numpy.array
         pandas.Series"""
 
-        # convert each axis to numpy array (or leave as None)
+        # Convert each axis to numpy array (or leave as None)
         x = self.axis_to_np(xaxis)
         y = self.axis_to_np(yaxis)
         c = self.axis_to_np(caxis)
 
-        # get all shared indices from used axes that aren't nan
+        # Get all shared indices from used axes that aren't nan
         if yaxis is None:
             indices = np.where(~np.isnan(x))[0]
             return x[indices], None, None, indices
@@ -1200,19 +1200,19 @@ class report(object):
         pandas.Series
         matplotlib.patches.Ellipse"""
 
-        # only write figure if user wants it
+        # Only write figure if user wants it
         if self.write:
-            # derive name of thumbnail file
+            # Derive name of thumbnail file
             thumb = '{0}_thumb.png'.format(filename[:-1-len(self.plot_to)])
-            # don't produce plot if file exists and user didn't specify to re-do
+            # Don't produce plot if file exists and user didn't specify to re-do
             if os.path.exists(filename) and not redo:
                 if self.verbose:
                     print('File already exists. Skipping plot.')
             else:
-                # open html file for plot
+                # Open html file for plot
                 if 'html' in filename:
                     html_fig = open(filename, 'w')
-                # use figure passed in or create new one
+                # Use figure passed in or create new one
                 if figure is not None:
                     fig = figure
                 else:
@@ -1221,20 +1221,20 @@ class report(object):
                 ax = plt.subplot(111)
                 norm = None
 
-                # plot histogram
+                # Plot histogram
                 if y is None:
                     edges = np.linspace(-3, 2, 11)  # specific to spectral index
                     err_data = ax.hist(x, bins=edges)
-                # plot scatter of data points with fixed colour
+                # Plot scatter of data points with fixed colour
                 elif c is None:
                     markers = self.markers.copy()
                     markers.pop('s')
                     ax.plot(x, y, 'o', zorder=20, alpha=0.0, **markers)
                     data, = ax.plot(x, y, 'o', **markers)
                     handles.append(data)
-                # plot scatter of data points with colour axis
+                # Plot scatter of data points with colour axis
                 else:
-                    # normalise the colour bar so each bin contains equal number of data points
+                    # Normalise the colour bar so each bin contains equal number of data points
                     norm = colors.BoundaryNorm(np.percentile(c, np.linspace(0, 100,
                                                                             self.cmap.N+1)),
                                                self.cmap.N)
@@ -1244,25 +1244,25 @@ class report(object):
                     cbar.set_label(clabel, **self.fig_font)
                     data = ax.scatter(x, y, c=c, cmap=self.cmap, zorder=20, alpha=0.0, norm=norm,
                                       **self.colour_markers)  # same hack as above
-                # plot error bars and add to list of handles
+                # Plot error bars and add to list of handles
                 if yerr is not None:
                     err_data = ax.errorbar(x, y, yerr=yerr, zorder=4, linestyle='none',
                                            marker=self.markers['marker'],
                                            color=self.markers['color'])
                     handles.append(err_data)
 
-                # set default min and max axis limits, which may change
+                # Set default min and max axis limits, which may change
                 xmin, xmax = ax.get_xlim()
                 ymin, ymax = ax.get_ylim()
 
-                # derive limits of x and y axes axis_perc % beyond their current limit
+                # Derive limits of x and y axes axis_perc % beyond their current limit
                 if axis_perc > 0:
                     xmin = axis_lim(x, min, perc=axis_perc)
                     xmax = axis_lim(x, max, perc=axis_perc)
                     ymin = axis_lim(y, min, perc=axis_perc)
                     ymax = axis_lim(y, max, perc=axis_perc)
 
-                # plot each line according to the input functions
+                # Plot each line according to the input functions
                 if line_funcs is not None:
                     xlin = np.linspace(xmin, xmax, num=1000)
                     ylin = np.linspace(ymin, ymax, num=1000)
@@ -1271,7 +1271,7 @@ class report(object):
                         xline, yline = func(xlin, ylin)
                         plt.plot(xline, yline, lw=2, color='black', linestyle='-', zorder=12)
 
-                # doing this here forces the lines in html plots to not increase the axis limits
+                # Doing this here forces the lines in html plots to not increase the axis limits
                 if reverse_x:
                     plt.xlim(xmax, xmin)
                 else:
@@ -1279,13 +1279,13 @@ class report(object):
 
                 plt.ylim(ymin, ymax)
 
-                # overlay the title and labels according to given fonts and sizes
+                # Overlay the title and labels according to given fonts and sizes
                 plt.tick_params(**self.label_size)
                 plt.title(title, **self.fig_font)
                 plt.xlabel(xlabel, **self.fig_font)
                 plt.ylabel(ylabel, **self.fig_font)
 
-                # overlay arrows on each data point
+                # Overlay arrows on each data point
                 if arrows is not None:
                     if not (type(arrows) is tuple and len(arrows) == 2):
                         warnings.warn_explicit('Arrows not formatted correctly for plt.quiver(). '
@@ -1297,9 +1297,9 @@ class report(object):
                         plt.quiver(x, y, arrows[0], arrows[1], c, units='x', cmap=self.cmap,
                                    norm=norm, **self.arrows)
 
-                # annotate input text
+                # Annotate input text
                 if text is not None and 'html' not in filename:
-                    # write to given location on plot
+                    # Write to given location on plot
                     kwargs = self.fig_font.copy()
 
                     if loc == 'tl':
@@ -1319,11 +1319,11 @@ class report(object):
 
                     plt.text(*args, **kwargs)
 
-                # write a legend
+                # Write a legend
                 if len(leg_labels) > 0:
                     plt.legend(handles, leg_labels, fontsize=self.fig_font['fontsize']//1.5)
 
-                # overlay ellipses on figure
+                # Overlay ellipses on figure
                 if ellipses is not None:
                     for e in ellipses:
                         ax.add_patch(e)
@@ -1331,30 +1331,30 @@ class report(object):
                 if self.verbose:
                     print("Writing figure to '{0}'.".format(filename))
 
-                # write thumbnail of this figure
+                # Write thumbnail of this figure
                 if filename != 'screen':
                     plt.savefig(thumb)
                     image.thumbnail(thumb, thumb, scale=0.05)
 
-                # write html figure
+                # Write html figure
                 if 'html' in filename:
-                    # include label for every datapoint
+                    # Include label for every datapoint
                     if labels is not None:
                         tooltip = plugins.PointHTMLTooltip(data, labels=labels)
                         plugins.connect(fig, tooltip)
 
-                    # print coordinates of mouse as it moves across figure
+                    # Print coordinates of mouse as it moves across figure
                     plugins.connect(fig, plugins.MousePosition(fontsize=self.fig_font['fontsize']))
                     html_fig.write(mpld3.fig_to_html(fig))
 
-                    # write annotations to end of html file if user wants html plots
+                    # Write annotations to end of html file if user wants html plots
                     if text is not None:
                         html_fig.write(self.text_to_html(text))
 
-                # otherwise show figure on screen
+                # Otherwise show figure on screen
                 elif filename == 'screen':
                     plt.show()
-                # otherwise write with given extension
+                # Otherwise write with given extension
                 else:
                     plt.savefig(filename)
 
@@ -1394,19 +1394,19 @@ class report(object):
 
         filename = 'screen'
 
-        # write survey and number of matched to cross-matches report table
+        # Write survey and number of matched to cross-matches report table
         self.html.write("""<tr>
                         <td>{0}</td>
                         <td>{1}</td>
                         <td>{2}""".format(name2, self.cat.freq[name2], self.cat.count[name2]))
 
-        # plot the positional offsets
+        # Plot the positional offsets
         fig = plt.figure(**self.fig_size)
         title = "{0} \u2014 {1} positional offsets".format(name1, name2)
         if self.plot_to != 'screen':
             filename = '{0}/{1}_{2}_astrometry.{3}'.format(self.figDir, name1, name2, self.plot_to)
 
-        # compute the S/N and its log based on main catalogue
+        # Compute the S/N and its log based on main catalogue
         if name1 in list(self.cat.flux.keys()):
             self.cat.df['SNR'] = self.cat.flux[name1] / self.cat.flux_err[name1]
             self.cat.df['logSNR'] = np.log10(self.cat.df['SNR'])
@@ -1414,11 +1414,11 @@ class report(object):
         else:
             caxis = None
 
-        # get non-nan data shared between each used axis as a numpy array
+        # Get non-nan data shared between each used axis as a numpy array
         x, y, c, indices = self.shared_indices(self.cat.dRA[name2],
                                                yaxis=self.cat.dDEC[name2], caxis=caxis)
 
-        # derive the statistics of x and y and store in string to annotate on figure
+        # Derive the statistics of x and y and store in string to annotate on figure
         dRAmed, dRAmean, dRAstd, dRAerr, dRAmad = get_stats(x)
         dDECmed, dDECmean, dDECstd, dDECerr, dDECmad = get_stats(y)
         txt = r'$\widetilde{\Delta RA}$: %.2f' % dRAmed + '\n'
@@ -1430,21 +1430,21 @@ class report(object):
         txt += r'$\sigma_{\Delta DEC}$: %.2f' % dDECstd + '\n'
         txt += r'$\sigma_{\overline{\Delta DEC}}$: %.2f' % dDECerr
 
-        # create an ellipse at the position of the median with axes of standard deviation
+        # Create an ellipse at the position of the median with axes of standard deviation
         e1 = Ellipse((dRAmed, dDECmed), width=dRAstd, height=dDECstd, color='black', fill=False,
                      linewidth=3, zorder=10, alpha=0.9)
 
-        # force axis limits of the search radius
+        # Force axis limits of the search radius
         radius = max(self.cat.radius[name1], self.cat.radius[name2])
         plt.axis('equal')
         plt.xlim(-radius, radius)
         plt.ylim(-radius, radius)
 
-        # create an ellipse at 0,0 with width 2 x search radius
+        # Create an ellipse at 0,0 with width 2 x search radius
         e2 = Ellipse((0, 0), width=radius*2, height=radius*2, color='grey', fill=False,
                      linewidth=3, linestyle='--', zorder=1, alpha=0.9)
 
-        # format labels according to destination of figure
+        # Format labels according to destination of figure
         if self.plot_to == 'html':
             xlabel = '\u0394RA (arcsec)'
             ylabel = '\u0394DEC (arcsec)'
@@ -1454,7 +1454,7 @@ class report(object):
             ylabel = r'$\Delta$DEC (arcsec)'
             clabel = r'$\log_{10}$ S/N'
 
-        # for html plots, add S/N and separation labels for every data point
+        # For html plots, add S/N and separation labels for every data point
         if caxis is not None:
             labels = ['S/N = {0:.2f}, separation = {1:.2f}\"'.format(cval, totSep) for cval,
                       totSep in zip(self.cat.df.loc[indices, 'SNR'], self.cat.sep[name2][indices])]
@@ -1462,22 +1462,22 @@ class report(object):
             labels = ['Separation = {0:.2f}\"'.format(cval) for cval in
                       self.cat.sep[name2][indices]]
 
-        # get median separation in arcsec
+        # Get median separation in arcsec
         c1 = SkyCoord(ra=0, dec=0, unit='arcsec, arcsec')
         c2 = SkyCoord(ra=dRAmed, dec=dDECmed, unit='arcsec, arcsec')
         sep_med = c1.separation(c2).arcsec
 
-        # get mad of separation in arcsec
+        # Get mad of separation in arcsec
         c1 = SkyCoord(ra=0, dec=0, unit='arcsec, arcsec')
         c2 = SkyCoord(ra=dRAmad, dec=dDECmad, unit='arcsec, arcsec')
         sep_mad = c1.separation(c2).arcsec
 
-        # write the dRA and dDEC to html table
+        # Write the dRA and dDEC to html table
         self.html.write("""</td>
                         <td>{0:.2f} &plusmn {1:.2f} (RA)<br>{2:.2f} &plusmn {3:.2f} (Dec)
                         <br>""".format(dRAmed, dRAmad, dDECmed, dDECmad))
 
-        # plot the positional offsets
+        # Plot the positional offsets
         self.plot(x,
                   y=y,
                   c=c,
@@ -1495,7 +1495,7 @@ class report(object):
                   labels=labels,
                   redo=redo)
 
-        # plot the positional offsets across the sky
+        # Plot the positional offsets across the sky
         title += "by sky position"
         xlabel = 'RA (deg)'
         ylabel = 'DEC (deg)'
@@ -1503,11 +1503,11 @@ class report(object):
             filename = '{0}/{1}_{2}_astrometry_sky.{3}'.format(self.figDir, name1, name2,
                                                                self.plot_to)
 
-        # get non-nan data shared between each used axis as a numpy array
+        # Get non-nan data shared between each used axis as a numpy array
         x, y, c, indices = self.shared_indices(self.cat.ra[name2], yaxis=self.cat.dec[name2],
                                                caxis=caxis)
 
-        # for html plots, add S/N and separation labels for every data point
+        # For html plots, add S/N and separation labels for every data point
         if caxis is not None:
             labels = ['S/N = {0:.2f}, \u0394RA = {1:.2f}\", \u0394DEC = {2:.2f}\"'.format(cval, dra,
                                                                                           ddec)
@@ -1518,7 +1518,7 @@ class report(object):
             labels = ['\u0394RA = {0:.2f}\", \u0394DEC = {1:.2f}\"'.format(dra, ddec) for dra, ddec
                       in zip(self.cat.dRA[name2][indices], self.cat.dDEC[name2][indices])]
 
-        # plot the positional offsets across the sky
+        # Plot the positional offsets across the sky
         self.plot(x,
                   y=y,
                   c=c,
@@ -1533,13 +1533,13 @@ class report(object):
                   labels=labels,
                   redo=redo)
 
-        # derive column names and check if they exist
+        # Derive column names and check if they exist
         freq = int(round(self.cat.freq[name1]))
         fitted_flux_col = '{0}_extrapolated_{1}MHz_flux'.format(name2, freq)
         fitted_ratio_col = '{0}_extrapolated_{1}MHz_{2}_flux_ratio'.format(name2, freq, name1)
         ratio_col = '{0}_{1}_flux_ratio'.format(name2, name1)
 
-        # only plot flux ratio if it was derived
+        # Only plot flux ratio if it was derived
         if ratio_col not in self.cat.df.columns and (fitted_ratio_col not in self.cat.df.columns
                                                      or np.all(np.isnan(
                                                          self.cat.df[fitted_ratio_col]))):
@@ -1550,7 +1550,7 @@ class report(object):
             flux_ratio_type = ''
             self.html.write('<td>')
         else:
-            # compute flux ratio based on which one exists and rename variable for figure title
+            # Compute flux ratio based on which one exists and rename variable for figure title
             if ratio_col in self.cat.df.columns:
                 ratio = self.cat.df[ratio_col]
                 flux_ratio_type = name2
@@ -1560,7 +1560,7 @@ class report(object):
 
             logRatio = np.log10(ratio)
 
-            # plot the flux ratio as a function of S/N
+            # Plot the flux ratio as a function of S/N
             fig = plt.figure(**self.fig_size)
 
             title = "{0} / {1} flux ratio".format(name1, flux_ratio_type)
@@ -1569,18 +1569,18 @@ class report(object):
             if self.plot_to != 'screen':
                 filename = '{0}/{1}_{2}_ratio.{3}'.format(self.figDir, name1, name2, self.plot_to)
 
-            # get non-nan data shared between each used axis as a numpy array
+            # Get non-nan data shared between each used axis as a numpy array
             x, y, c, indices = self.shared_indices('SNR', yaxis=ratio)
             plt.loglog()
             plt.gca().grid(b=True, which='minor', color='w', linewidth=0.5)
 
-            # derive the ratio statistics and store in string to append to plot
+            # Derive the ratio statistics and store in string to append to plot
             ratio_med, ratio_mean, ratio_std, ratio_err, ratio_mad = get_stats(y)
             txt = r'$\widetilde{Ratio}$: %.2f' % ratio_med + '\n'
             txt += r'$\overline{Ratio}$: %.2f' % ratio_mean + '\n'
             txt += r'$\sigma_{Ratio}$: %.2f' % ratio_std + '\n'
             txt += r'$\sigma_{\overline{Ratio}}$: %.2f' % ratio_err
-            # for html plots, add flux labels for every data point
+            # For html plots, add flux labels for every data point
             if flux_ratio_type == name2:
                 labels = ['{0} flux = {1:.2f} mJy, {2} flux = {3:.2f} mJy'.format(name1, flux1,
                                                                                   name2, flux2)
@@ -1593,7 +1593,7 @@ class report(object):
                           for flux1, flux2 in zip(self.cat.flux[name1][indices]*1e3,
                                                   self.cat.df[fitted_flux_col][indices]*1e3)]
 
-            # write the ratio to html report table
+            # Write the ratio to html report table
             if flux_ratio_type == name2:
                 type = 'measured'
             else:
@@ -1601,7 +1601,7 @@ class report(object):
             self.html.write("""</td>
                         <td>{0:.2f} &plusmn {1:.2f} ({2})<br>""".format(ratio_med, ratio_mad, type))
 
-            # plot the flux ratio as a function of S/N
+            # Plot the flux ratio as a function of S/N
             self.plot(x,
                       y=y,
                       c=c,
@@ -1616,7 +1616,7 @@ class report(object):
                       filename=filename,
                       labels=labels,
                       redo=redo)
-            # plot the flux ratio across the sky
+            # Plot the flux ratio across the sky
             fig = plt.figure(**self.fig_size)
             title += " by sky position"
             xlabel = 'RA (deg)'
@@ -1625,20 +1625,20 @@ class report(object):
                 filename = '{0}/{1}_{2}_ratio_sky.{3}'.format(self.figDir, name1, name2,
                                                               self.plot_to)
 
-            # get non-nan data shared between each used axis as a numpy array
+            # Get non-nan data shared between each used axis as a numpy array
             x, y, c, indices = self.shared_indices(self.cat.ra[name2],
                                                    yaxis=self.cat.dec[name2], caxis=logRatio)
 
-            # format labels according to destination of figure
+            # Format labels according to destination of figure
             if self.plot_to == 'html':
                 clabel = 'log\u2081\u2080 Flux Ratio'
             else:
                 clabel = r'$\log_{10}$ Flux Ratio'
 
-            # for html plots, add flux ratio labels for every data point
+            # For html plots, add flux ratio labels for every data point
             labels = ['{0} = {1:.2f}'.format('Flux Ratio', cval) for cval in ratio[indices]]
 
-            # plot the flux ratio across the sky
+            # Plot the flux ratio across the sky
             self.plot(x,
                       y=y,
                       c=c,
@@ -1653,7 +1653,7 @@ class report(object):
                       labels=labels,
                       redo=redo)
 
-        # derive spectral index column name and check if exists
+        # Derive spectral index column name and check if exists
         si_column = '{0}_{1}_alpha'.format(name1, name2)
 
         if si_column not in self.cat.df.columns:
@@ -1662,7 +1662,7 @@ class report(object):
             alpha_med = -111  # null flag
             self.html.write('<td>')
         else:
-            # plot the spectral index
+            # Plot the spectral index
             fig = plt.figure(**self.fig_size)
             plt.xlim(-3, 2)
             title = "{0}-{1} Spectral Index".format(name1, name2)
@@ -1670,10 +1670,10 @@ class report(object):
                 filename = '{0}/{1}_{2}_spectal_index.{3}'.format(self.figDir, name1,
                                                                   name2, self.plot_to)
 
-            # get non-nan data shared between each used axis as a numpy array
+            # Get non-nan data shared between each used axis as a numpy array
             x, y, c, indices = self.shared_indices(si_column)
 
-            # format labels according to destination of figure
+            # Format labels according to destination of figure
             freq1 = int(round(min(self.cat.freq[name1], self.cat.freq[name2])))
             freq2 = int(round(max(self.cat.freq[name1], self.cat.freq[name2])))
             if self.plot_to == 'html':
@@ -1681,18 +1681,18 @@ class report(object):
             else:
                 xlabel = r'$\alpha_{%s}^{%s}$' % (freq1, freq2)
 
-            # derive the statistics of x and store in string
+            # Derive the statistics of x and store in string
             alpha_med, alpha_mean, alpha_std, alpha_err, alpha_mad = get_stats(x)
             txt = r'$\widetilde{\alpha}$: %.2f' % alpha_med + '\n'
             txt += r'$\overline{\alpha}$: %.2f' % alpha_mean + '\n'
             txt += r'$\sigma_{\alpha}$: %.2f' % alpha_std + '\n'
             txt += r'$\sigma_{\overline{\alpha}}$: %.2f' % alpha_err
 
-            # write the ratio to html report table
+            # Write the ratio to html report table
             self.html.write("""</td>
                         <td>{0:.2f} &plusmn {1:.2f}<br>""".format(alpha_med, alpha_mad))
 
-            # plot the spectral index
+            # Plot the spectral index
             self.plot(x,
                       figure=fig,
                       title=title,
@@ -1704,14 +1704,14 @@ class report(object):
                       loc='tl',
                       redo=redo)
 
-        # write the end of the html report table row
+        # Write the end of the html report table row
         self.html.write("""</td>
                     </tr>""")
 
         alpha_med = self.cat.med_si
         alpha_type = '{0}'.format(name1)
 
-        # create dictionary of validation metrics and where they come from
+        # Create dictionary of validation metrics and where they come from
         metric_val = {'Flux Ratio': ratio_med,
                       'Flux Ratio Uncertainty': ratio_mad,
                       'RA Offset': dRAmed,
@@ -1730,7 +1730,7 @@ class report(object):
 
         count = self.cat.count[name2]
 
-        # overwrite values if they are valid and come from a larger catalogue
+        # Overwrite values if they are valid and come from a larger catalogue
         for key in list(metric_val.keys()):
             if count > self.metric_count[key] and metric_val[key] != -111:
                 self.metric_count[key] = count

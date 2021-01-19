@@ -12,7 +12,7 @@ from functions import remove_extn, get_pixel_area
 import subprocess
 import shlex
 
-# ignore annoying astropy warnings and set my own obvious warning output
+# Ignore annoying astropy warnings and set my own obvious warning output
 warnings.simplefilter('ignore', category=AstropyWarning)
 cf = currentframe()
 WARN = '\n\033[91mWARNING: \033[0m' + getframeinfo(cf).filename
@@ -43,7 +43,7 @@ class radio_image(object):
         Arguments:
         ----------
         filepath : string
-            The absolute path to a fits image (must have '.fits' extension).
+            The absolute path to a FITS image (must have '.fits' extension).
 
         Keyword arguments:
         ------------------
@@ -52,7 +52,7 @@ class radio_image(object):
         aegean_extn : string
             The extension of the Aegean catalogue if source finding is performed.
         rms_map : string
-            The filepath of a fits image of the local rms. If None is provided, a BANE map is used.
+            The filepath of a FITS image of the local rms. If None is provided, a BANE map is used.
         SNR : float
             The signal-to-noise ratio, used to derive a search radius when cross-matching
             the catalogue of this image.
@@ -62,7 +62,7 @@ class radio_image(object):
         self.verbose = verbose
         if verbose:
             print("----------------------")
-            print("| Reading fits image |")
+            print("| Reading FITS image |")
             print("----------------------")
         if verbose:
             print("Initialising radio_image object using file '{0}'.\
@@ -80,22 +80,22 @@ class radio_image(object):
         self.residual = '../{0}_residual.fits'.format(self.basename)
         self.model = '../{0}_model.fits'.format(self.basename)
 
-        # open fits image and store header specs
+        # Open FITS image and store header specs
         self.fits = f.open(filepath)[0]  # HDU axis 0
         self.header_specs(self.fits, verbose=verbose)
 
-        # expected positional error, given by FWHM/SNR (Condon, 1997)
+        # Expected positional error, given by FWHM/SNR (Condon, 1997)
         self.posErr = int(round(self.bmaj/SNR))
 
     def header_key(self, header, key, floatify=False):
 
-        """Return the value of the key from a fits header. If key doesn't exist,
+        """Return the value of the key from a FITS header. If key doesn't exist,
           will be returned.
 
         Arguments:
         ----------
         header : astropy.io.fits.header.Header
-            A fits header object.
+            A FITS header object.
         key : string
             A key from the header.
 
@@ -122,13 +122,13 @@ class radio_image(object):
 
     def header_specs(self, fits, verbose=False):
 
-        """Read the header of a fits file and set several fields for this instance,
+        """Read the header of a FITS file and set several fields for this instance,
         including the RA, DEC, BMIN, BMAJ, BPA, frequency, etc.
 
         Arguments:
         ----------
         fits : astropy.io.fits
-            The primary axis of a fits image.
+            The primary axis of a FITS image.
 
         Keyword arguments:
         ------------------
@@ -136,7 +136,7 @@ class radio_image(object):
             Verbose output."""
 
         if verbose:
-            print("Reading Bmaj, RA/DEC centre, frequency, etc from fits header.")
+            print("Reading Bmaj, RA/DEC centre, frequency, etc from FITS header.")
 
         head = fits.header
         w = WCS(head)
@@ -152,7 +152,7 @@ class radio_image(object):
         self.date = self.header_key(head, 'DATE-OBS')
         self.duration = self.header_key(head, 'DURATION', floatify=True)
 
-        # get ASKAP soft version from history in header if it exists
+        # Get ASKAP soft version from history in header if it exists
         self.soft_version = ''
         self.pipeline_version = ''
         if 'HISTORY' in list(head.keys()):
@@ -162,11 +162,11 @@ class radio_image(object):
                 if 'ASKAP pipeline version' in val:
                     self.pipeline_version = val.split()[-1].replace(',', '')
 
-        # derive duration in hours
+        # Derive duration in hours
         if self.duration != '':
             self.duration = '{0:.2f}'.format(self.duration/3600)
 
-        # iterate through axes in header to find RA,DEC and frequency
+        # Iterate through axes in header to find RA,DEC and frequency
         axis = 0
         while axis < w.naxis:
             chanType = w.wcs.ctype[axis]
@@ -183,7 +183,7 @@ class radio_image(object):
                 self.freq = w.wcs.crval[axis]/1e6  # freq in MHz
                 w = w.dropaxis(axis)
                 axis -= 1
-            # drop all other axes from wcs object so only RA/DEC left
+            # Drop all other axes from wcs object so only RA/DEC left
             else:
                 w = w.dropaxis(axis)
                 axis -= 1
@@ -193,7 +193,7 @@ class radio_image(object):
         self.area, self.solid_ang = get_pixel_area(fits, nans=True, ra_axis=self.ra_axis,
                                                    dec_axis=self.dec_axis, w=w)
 
-        # store the RA/DEC of the image as centre pixel and store image vertices
+        # Store the RA/DEC of the image as centre pixel and store image vertices
         naxis1 = int(head['NAXIS1'])
         naxis2 = int(head['NAXIS2'])
         pixcrd = np.array([[naxis1/2, naxis2/2]])
@@ -275,7 +275,7 @@ class radio_image(object):
             command = 'aegean --cores={0} --noise={1} --background={2}'\
                       ' --table={3}'.format(ncores, self.rms_map, self.bkg, self.cat_name)
 
-            # Also write ds9 region file and island fits file when used wants verbose output
+            # Also write ds9 region file and island FITS file when used wants verbose output
             if self.verbose:
                 command += ',{0}.reg'.format(remove_extn(self.cat_name))
 
@@ -311,7 +311,7 @@ class radio_image(object):
 
     def correct_img(self, dRA, dDEC, flux_factor=1.0):
 
-        """Correct the header of the fits image from this instance, by shifting the reference positions,
+        """Correct the header of the FITS image from this instance, by shifting the reference positions,
         and optionally multiplying the pixels by a factor. Write the image to 'name_corrected.fits'.
 
         Arguments:
@@ -327,7 +327,7 @@ class radio_image(object):
             The factor by which to mutiply all pixels."""
 
         filename = '{0}_corrected.fits'.format(self.basename)
-        print("Correcting header of fits image and writing to '{0}'".format(filename))
+        print("Correcting header of FITS image and writing to '{0}'".format(filename))
         print("Shifting RA by {0} seconds and DEC by {1} arcsec".format(dRA, dDEC))
 
         if flux_factor != 1.0:

@@ -14,7 +14,7 @@ from astropy.utils.exceptions import AstropyWarning
 from functions import config2dic, flux_at_freq, SED, two_freq_power_law, axis_lim
 
 
-# ignore annoying astropy warnings and set my own obvious warning output
+# Ignore annoying astropy warnings and set my own obvious warning output
 warnings.simplefilter('ignore', category=AstropyWarning)
 cf = currentframe()
 WARN = '\n\033[91mWARNING: \033[0m' + getframeinfo(cf).filename
@@ -35,7 +35,7 @@ class catalogue(object):
         Arguments:
         ----------
         filename : string
-            The path to a fits, csv, xml or 'sep'-delimited catalogue.
+            The path to a FITS, csv, xml or 'sep'-delimited catalogue.
         name : string
             A unique short-hand name for the catalogue (e.g. 'NVSS'). This
             will act as the key for a number of dictionaries of the key catalogue
@@ -114,21 +114,21 @@ class catalogue(object):
         self.image = image
         self.SNR = SNR
 
-        # set basename
+        # Set basename
         self.basename = basename
         if self.basename is None:
             self.basename = name
 
-        # set names of all output catalogues
+        # Set names of all output catalogues
         self.cutout_name = "{0}_cutout.csv".format(self.basename)
         self.filtered_name = "{0}_filtered.csv".format(self.basename)
         self.si_name = ''
         si_files = glob.glob("{0}*_si.csv".format(self.basename))
         if len(si_files) > 0:
-            # this is a guess, but is updated later if doesn't exist
+            # This is a guess, but is updated later if doesn't exist
             self.si_name = si_files[0]
 
-        # look for files already processed in order of preference
+        # Look for files already processed in order of preference
         fileFound = False
         if autoload:
             fileFound = True
@@ -160,7 +160,7 @@ class catalogue(object):
         # column names when not already done
         if not fileFound:
             self.df.columns = '{0}_'.format(self.name) + self.df.columns
-            
+
         self.col_suffix = col_suffix
         if finder is None:
             self.finder = None
@@ -176,7 +176,7 @@ class catalogue(object):
             if self.verbose:
                 print('Using default configuration for Selavy.')
 
-            # set default column names for Selavy, appending catalogue name to beginning
+            # Set default column names for Selavy, appending catalogue name to beginning
             self.flux_col = self.unique_col_name('flux_int')
             self.flux_err_col = self.unique_col_name('flux_int_err')
             self.peak_col = self.unique_col_name('flux_peak')
@@ -196,7 +196,7 @@ class catalogue(object):
             if self.verbose:
                 print('Using default configuration for pybdsm.')
 
-            # set default column names for pybdsm, appending catalogue name to beginning
+            # Set default column names for pybdsm, appending catalogue name to beginning
             self.flux_col = self.unique_col_name('Total_flux')
             self.flux_err_col = self.unique_col_name('E_Total_flux')
             self.peak_col = self.unique_col_name('Peak_flux')
@@ -217,7 +217,7 @@ class catalogue(object):
                 if self.verbose:
                     print('Using default configuration for Aegean.')
 
-            # append catalogue name to beginning of all columns
+            # Append catalogue name to beginning of all columns
             self.flux_col = self.unique_col_name(flux_col)
             self.flux_err_col = self.unique_col_name(flux_err_col)
             self.peak_col = self.unique_col_name(peak_col)
@@ -230,7 +230,7 @@ class catalogue(object):
             else:
                 self.rms_val = rms_val
 
-            # specific fix for GLEAM catalogue
+            # Specific fix for GLEAM catalogue
             if finder is not None and finder.lower() == 'aegean':
                 self.col_suffix = ''
             self.flux_unit = flux_unit
@@ -249,7 +249,7 @@ class catalogue(object):
             'uJy'. Assuming 'Jy'\n".format(flux_unit), UserWarning, WARN, cf.f_lineno)
             self.flux_unit = 'jy'
 
-        # keep a running list of key values for all sources, as a dictionary with key 'name'
+        # Keep a running list of key values for all sources, as a dictionary with key 'name'
         self.cat_list = [self.name]
         self.freq = {self.name: self.frequency}
         self.radius = {self.name: self.search_rad}
@@ -284,7 +284,7 @@ class catalogue(object):
         col : string
             Unique column name or None."""
         if col is not None:
-            col = '{0}_{1}{2}'.format(self.name,col,self.col_suffix)
+            col = '{0}_{1}{2}'.format(self.name, col, self.col_suffix)
         return col
 
     def cat2df(self, filepath, sep, verbose=False):
@@ -316,7 +316,7 @@ class catalogue(object):
         if verbose:
             print("Loading '{0}' catalogue into pandas.".format(filepath.split('/')[-1]))
 
-        # convert from fits or xml to dataframe
+        # Convert from FITS or xml to dataframe
         extn = filepath.split('.')[-1].lower()
         if extn == 'fits' or extn == 'gz':
             table = f.open(filepath)[1]
@@ -324,7 +324,7 @@ class catalogue(object):
         elif extn == 'xml':  # assumed to come from Selavy
             table = parse_single_table(filepath).to_table(use_names_over_ids=True)
             df = table.to_pandas()
-        # otherwise, load straight into pandas as csv or 'sep' delimited file
+        # Otherwise, load straight into pandas as csv or 'sep' delimited file
         elif extn == 'csv':
             df = pd.read_csv(filepath)
         else:
@@ -384,7 +384,7 @@ class catalogue(object):
         self.blends = len(np.where(self.df[self.island_col].value_counts() > 1)[0])
         self.cat_flux = np.sum(self.flux[self.name])
 
-        # get median spectral index if column exists
+        # Get median spectral index if column exists
         if self.name in list(self.si.keys()):
             self.med_si = np.median(self.si[self.name])
         else:
@@ -442,10 +442,10 @@ class catalogue(object):
 
         coords_set = False
 
-        # after cross-match, add new coordinates, positions and fluxes, etc to dictionaries
+        # After cross-match, add new coordinates, positions and fluxes, etc to dictionaries
         if cat is not None:
 
-            # set easy names for columns
+            # Set easy names for columns
             prefix = '{0}_{1}_'.format(cat.name, self.name)
             sep = prefix + 'sep'
             dRAsec = prefix + 'dRAsec'
@@ -459,14 +459,14 @@ class catalogue(object):
             self.ra[cat.name] = cat.ra[cat.name]
             self.dec[cat.name] = cat.dec[cat.name]
 
-            # compute the positional offsets
+            # Compute the positional offsets
             self.df[dRAsec] = (self.ra[self.name] -
                                self.ra[cat.name])*3600  # in seconds
             self.df[dRA] = self.df[dRAsec]*np.cos(np.deg2rad((self.dec[self.name] +
                                                               self.dec[cat.name])/2))
             self.df[dDEC] = (self.dec[self.name] - self.dec[cat.name])*3600
 
-            # store in dictionaries
+            # Store in dictionaries
             self.sep[cat.name] = cat.df[sep]
             self.dRAsec[cat.name] = self.df[dRAsec]
             self.dRA[cat.name] = self.df[dRA]
@@ -477,7 +477,7 @@ class catalogue(object):
                 self.flux_err[cat.name] = cat.flux_err[cat.name]
                 self.rms[cat.name] = cat.rms[cat.name]
 
-                # write flux ratio if frequencies within 1%
+                # Write flux ratio if frequencies within 1%
                 freq_ratio = np.abs(cat.freq[cat.name]/self.freq[self.name]-1)
                 if self.name in list(self.flux.keys()) and freq_ratio < 0.01:
                     self.df[prefix + 'flux_ratio'] = self.flux[self.name]/self.flux[cat.name]
@@ -485,11 +485,11 @@ class catalogue(object):
             if cat.si_col is not None:
                 self.si[cat.name] = cat.si[cat.name]
 
-        # otherwise initialise or update dictionary for this instance
+        # Otherwise initialise or update dictionary for this instance
         else:
             if set_coords or (indices is not None and len(self.coords) == 0):
 
-                # initialise SkyCoord object for all sky positions and create numpy
+                # Initialise SkyCoord object for all sky positions and create numpy
                 # array for RA and DEC in degrees
                 self.coords[self.name] = SkyCoord(ra=self.df[self.ra_col],
                                                   dec=self.df[self.dec_col],
@@ -499,7 +499,7 @@ class catalogue(object):
                 self.dec[self.name] = self.coords[self.name].dec.deg
                 coords_set = True
 
-            # initliase fluxes
+            # Initialise fluxes
             if indices is None and not (self.flux_col is None and self.peak_col is None):
 
                 # Create pandas series for peak or integrated flux and errors
@@ -520,7 +520,7 @@ class catalogue(object):
                     else:
                         self.flux_err[self.name] = self.flux[self.name]*0.1  # 10% error
 
-                # set 10% errors where error is <=0
+                # Set 10% errors where error is <=0
                 if np.any(self.flux_err[self.name] <= 0):
                     i = np.where(self.flux_err[self.name] <= 0)[0]
                     self.flux_err[self.name][i] = self.flux[self.name][i]*0.1  # 10% error
@@ -544,14 +544,14 @@ class catalogue(object):
                 if self.si_col is not None:
                     self.si[self.name] = self.df[self.si_col]
 
-            # otherwise just update this instance
+            # Otherwise just update this instance
             else:
                 if not coords_set:
                     self.coords[self.name] = self.coords[self.name][indices]
                     self.ra[self.name] = self.ra[self.name][indices]
                     self.dec[self.name] = self.dec[self.name][indices]
 
-                # reset indices of pandas series
+                # Reset indices of pandas series
                 if self.name in self.flux:
                     self.flux[self.name] = self.flux[self.name][indices].reset_index(drop=True)
                     self.flux_err[self.name] = self.flux_err[self.name][indices].reset_index(
@@ -559,7 +559,7 @@ class catalogue(object):
                     if type(self.rms_val) is str:
                         self.rms[self.name] = self.rms[self.name][indices].reset_index(drop=True)
 
-                # only update these for cross-matched catalogues
+                # Only update these for cross-matched catalogues
                 if self.name in self.sep:
                     self.sep[self.name] = self.sep[self.name][indices].reset_index(drop=True)
                     self.dRAsec[self.name] = self.dRAsec[self.name][indices].reset_index(drop=True)
@@ -569,7 +569,7 @@ class catalogue(object):
                 if self.name in self.si:
                     self.si[self.name] = self.si[self.name][indices].reset_index(drop=True)
 
-        # reset indices and catalogue length after change has been made
+        # Reset indices and catalogue length after change has been made
         self.df = self.df.reset_index(drop=True)
         self.count[self.name] = len(self.df)
 
@@ -592,7 +592,7 @@ class catalogue(object):
         ---------
         pandas.DataFrame"""
 
-        # read from file if filename is provided
+        # Read from file if filename is provided
         if type(catalogue) is str:
             self.df = pd.read_csv(catalogue)
 
@@ -604,7 +604,7 @@ class catalogue(object):
         else:
             self.df = catalogue
 
-        # reset the key fields
+        # Reset the key fields
         self.set_key_fields(set_coords=set_coords)
 
     def write_df(self, write, filename, verbose=True):
@@ -654,13 +654,13 @@ class catalogue(object):
 
         filename = self.cutout_name
 
-        # if column units aren't degrees, set sky coords and get RA/DEC in degrees
+        # If column units aren't degrees, set sky coords and get RA/DEC in degrees
         if self.ra_fmt != 'deg' or self.dec_fmt != 'deg':
             if len(self.coords) == 0:
                 self.set_key_fields(set_coords=True)
             RA = self.ra[self.name]
             DEC = self.dec[self.name]
-        # otherwise just use column values
+        # Otherwise just use column values
         else:
             RA = self.df[self.ra_col]
             DEC = self.df[self.dec_col]
@@ -679,7 +679,7 @@ class catalogue(object):
                         print("Overwriting '{0}'.".format(filename))
                 print("Cutting out sources from {0}.".format(self.name))
 
-            # cut out all rows outside RA and DEC boundaries
+            # Cut out all rows outside RA and DEC boundaries
             if type(ra) is tuple:
                 ra_min, ra_max = axis_lim(ra, min), axis_lim(ra, max)
                 dec_min, dec_max = axis_lim(dec, min), axis_lim(dec, max)
@@ -689,7 +689,7 @@ class catalogue(object):
                 self.df = self.df[(RA <= ra_max) & (RA >= ra_min) & (DEC <= dec_max)
                                   & (DEC >= dec_min)]
 
-            # cut out all rows outside the FOV
+            # Cut out all rows outside the FOV
             else:
                 if verbose:
                     print("Using a {0}x{0} degree box centred at {1} deg, {2} deg.".format(fov,
@@ -705,7 +705,7 @@ class catalogue(object):
             self.set_key_fields(indices=self.df.index.tolist())
             self.write_df(write, filename)
 
-        # if file exists, simply read in catalogue
+        # If file exists, simply read in catalogue
         else:
             self.overwrite_df(filename, step='cutout', set_coords=False)
 
@@ -764,7 +764,7 @@ class catalogue(object):
                 print("Filtering sources in '{0}'...".format(filename))
                 print("Initial number of sources: {0}.".format(len(self.df)))
 
-            # reject faint sources
+            # Reject faint sources
             if flux_lim != 0:
                 if self.flux_col is not None:
                     self.df = self.df[self.flux[self.name] > flux_lim]
@@ -776,7 +776,7 @@ class catalogue(object):
                     resolved sources based on flux.\n", UserWarning, WARN,
                                            cf.f_lineno)
 
-            # reject low S/N sources
+            # Reject low S/N sources
             if SNR != 0:
                 if self.flux_col is not None and self.rms_val is not None:
                     # reindex key fields before comparison
@@ -789,7 +789,7 @@ class catalogue(object):
                     warnings.warn_explicit("rms or int flux column not given. Can't reject\
                     resolved sources based on SNR.\n", UserWarning, WARN, cf.f_lineno)
 
-            # reject resolved sources based on flux ratio
+            # Reject resolved sources based on flux ratio
             if ratio_frac != 0:
                 if self.peak_col is not None:
                     self.df = self.df[self.df[self.flux_col]/self.df[self.peak_col] <= ratio_frac]
@@ -801,7 +801,7 @@ class catalogue(object):
                     warnings.warn_explicit("No peak flux column given. Can't reject resolved\
                     sources using flux ratio.\n", UserWarning, WARN, cf.f_lineno)
 
-            # reject resolved sources based on flux ratio metric
+            # Reject resolved sources based on flux ratio metric
             if ratio_sigma != 0:
                 if self.peak_col is not None:
                     uncertainty = np.sqrt(self.df[self.flux_err_col]**2 + self.df[
@@ -819,7 +819,7 @@ class catalogue(object):
                     warnings.warn_explicit("No peak flux column given. Can't reject resolved\
                     sources using flux ratio.\n", UserWarning, WARN, cf.f_lineno)
 
-            # reject multi-component islands
+            # Reject multi-component islands
             if reject_blends:
                 if self.knownFinder:
                     island_counts = self.df[self.island_col].value_counts()
@@ -832,7 +832,7 @@ class catalogue(object):
                     warnings.warn_explicit("Can't reject blends since finder isn't Aegean or\
                     Selavy or pyBDSM.\n", UserWarning, WARN, cf.f_lineno)
 
-            # reject extended components based on component size
+            # Reject extended components based on component size
             if psf_tol != 0:
                 if self.knownFinder:
                     if self.image is not None:
@@ -853,10 +853,10 @@ class catalogue(object):
                                            isn't Aegean or Selavy or pyBDSM.\n", UserWarning,
                                            WARN, cf.f_lineno)
 
-            # reject sources with poor fit
+            # Reject sources with poor fit
             if resid_tol != 0:
                 if self.finder == 'aegean':
-                    # reindex key fields before comparison
+                    # Reindex key fields before comparison
                     self.set_key_fields(indices=self.df.index.tolist())
                     self.df = self.df[self.df['{0}_residual_std'.format(self.name)]
                                       <= resid_tol*self.rms[self.name]]
@@ -869,7 +869,7 @@ class catalogue(object):
                                            "since finder isn't Aegean.\n", UserWarning,
                                            WARN, cf.f_lineno)
 
-            # reject sources with any flags
+            # Reject sources with any flags
             if flags:
                 if self.flag_col is not None:
                     self.df = self.df[self.df[self.flag_col] == 0]
@@ -883,7 +883,7 @@ class catalogue(object):
             self.set_key_fields(indices=self.df.index.tolist(), set_coords=False)
             self.write_df(write, filename)
 
-        # if file exists, simply read in catalogue
+        # If file exists, simply read in catalogue
         else:
             self.overwrite_df(filename, step='filtering', verbose=verbose)
 
@@ -939,53 +939,53 @@ class catalogue(object):
                                                                                 len(cat.df),
                                                                                 cat.name))
 
-            # force coordinates to be set
+            # Force coordinates to be set
             if len(self.coords) == 0:
                 self.set_key_fields()
             if len(cat.coords) == 0:
                 cat.set_key_fields()
 
-            # get sky coordinates and find nearest match of every source
+            # Get sky coordinates and find nearest match of every source
             # from this instance, independent of the search radius
             c1 = self.coords[self.name]
             c2 = cat.coords[cat.name]
             indices, sep, sep3d = c1.match_to_catalog_sky(c2)
 
-            # take the maximum radius from the two
+            # Take the maximum radius from the two
             if radius == 'largest':
                 radius = max(self.search_rad, cat.search_rad)
                 if self.verbose:
                     print('Using the largest of the two search radii of {0} arcsec.'.format(radius))
 
-            # only take matched rows from cat, so self.df and cat.df are parallel
+            # Only take matched rows from cat, so self.df and cat.df are parallel
             cat.df = cat.df.iloc[indices].reset_index(drop=True)
 
-            # create pandas dataframe of the separations in arcsec
+            # Create pandas dataframe of the separations in arcsec
             sep_col = '{0}_{1}_sep'.format(cat.name, self.name)
             sepdf = pd.DataFrame(data={sep_col: sep.arcsec})
 
-            # only take matches within search radius
+            # Only take matches within search radius
             indices = np.where(sep.arcsec < radius)[0]
 
-            # only add cross-matched table when at least 1 match
+            # Only add cross-matched table when at least 1 match
             if len(indices) >= 1:
                 print("Found {0} matches within {1} arcsec.".format(len(indices), radius))
 
-                # don't reset indices so cat.df stays parallel with self.df
+                # Don't reset indices so cat.df stays parallel with self.df
                 cat.df = cat.df.iloc[indices]
                 sepdf = sepdf.iloc[indices]
 
-                # concatenate tables together according to match type
+                # Concatenate tables together according to match type
                 if join_type == '1and2':
                     matched_df = pd.concat([self.df, cat.df, sepdf], axis=1, join='inner')
                 elif join_type == '1':
                     matched_df = pd.concat([self.df, cat.df, sepdf],
                                            axis=1).reindex(self.df.index)
 
-                # reset indices and overwrite data frame with matched one
+                # Reset indices and overwrite data frame with matched one
                 matched_df = matched_df.reset_index(drop=True)
 
-                # set catalogue to matched df and write to file
+                # Set catalogue to matched df and write to file
                 self.overwrite_df(matched_df)
                 self.write_df(write, filename)
 
@@ -994,20 +994,20 @@ class catalogue(object):
                     len(indices), self.name, cat.name))
                 return
 
-        # if file exists, simply read in catalogue
+        # If file exists, simply read in catalogue
         else:
             print("'{0}' already exists. Skipping cross-matching step.".format(filename))
             print('Setting catalogue to this file.')
             matched_df = pd.read_csv(filename)
 
-        # update basename to this cross-matched catalogue
+        # Update basename to this cross-matched catalogue
         self.basename = filename[:-4]
 
-        # overwrite the df so unmatched rows (set to nan) are included
+        # Overwrite the df so unmatched rows (set to nan) are included
         cat.overwrite_df(matched_df)
         self.overwrite_df(matched_df)
 
-        # add key fields from matched catalogue
+        # Add key fields from matched catalogue
         self.set_key_fields(cat=cat)
 
     def fit_spectra(self, cat_name=None, match_perc=0, models=['pow'], fig_extn=None,
@@ -1049,29 +1049,29 @@ class catalogue(object):
         write : bool
             Write the spectral index catalogue to file."""
 
-        # update filename (usually after cross-match)
+        # Update filename (usually after cross-match)
         if not self.basename.endswith('si') and cat_name is None:
             self.basename += '_si'
         self.si_name = "{0}.csv".format(self.basename)
         filename = self.si_name
 
-        # if file exists, simply read in catalogue
+        # If file exists, simply read in catalogue
         if not redo and self.basename.endswith('si') and os.path.exists(filename):
             self.overwrite_df(filename, step='spectral index')
 
-        # when no cat name is given, use all available fluxes
+        # When no cat name is given, use all available fluxes
         if cat_name in [None, 'all']:
 
             print("-----------------------------")
             print("| Deriving spectral indices |")
             print("-----------------------------")
 
-            # derive the number of frequencies used to measure spectral
+            # Derive the number of frequencies used to measure spectral
             # indices, and store these for column names and for output
             num_cats, max_count = 0, 0
             used_cats, max_cat = '', ''
 
-            # derive column names based on main catalogue
+            # Derive column names based on main catalogue
             freq = int(round(self.frequency))
             suffix = '_{0}MHz'.format(freq)
             fitted_flux_suffix = '_fitted{0}_flux'.format(suffix)
@@ -1087,18 +1087,18 @@ class catalogue(object):
                     num_cats += 1
                     used_cats += "{0}, ".format(cat)
 
-                    # store the largest used catalogue
+                    # Store the largest used catalogue
                     if count > max_count:
                         max_cat = cat
                         max_count = count
 
-                    # derive extrapolated flux for each catalogue
+                    # Derive extrapolated flux for each catalogue
                     fitted_flux = '{0}_extrapolated{1}_flux'.format(cat, suffix)
                     fitted_ratio = '{0}_extrapolated{1}_{2}_flux_ratio'.format(cat, suffix,
                                                                                self.name)
                     self.est_fitted_flux(fitted_flux, fitted_ratio, freq, cat)
 
-            # don't derive spectral indices if there aren't 2+ catalogues to use,
+            # Don't derive spectral indices if there aren't 2+ catalogues to use,
             # but just derive flux at given frequency from a typical spectral index
             if (num_cats <= 1 or not fit_flux) and self.name in self.flux and\
                     (redo or best_fitted_flux not in self.df.columns):
@@ -1111,12 +1111,12 @@ class catalogue(object):
                                      fig_extn=fig_extn, GLEAM_subbands=GLEAM_subbands,
                                      GLEAM_nchans=GLEAM_nchans, redo=redo)
 
-        # otherwise derive the spectral index between this instance
+        # Otherwise derive the spectral index between this instance
         # and the given catalogue, if any cross-matches were found
         elif cat_name in self.cat_list:
             self.two_point_spectra(cat_name, redo)
 
-        # write catalogue to file
+        # Write catalogue to file
         self.write_df(write, filename)
 
     def est_fitted_flux(self, fitted_flux_col, fitted_ratio_col, freq, cat, spec_index=-0.8):
@@ -1168,7 +1168,7 @@ class catalogue(object):
         alpha_err_col = '{0}_err'.format(alpha_col)
 
         if redo or alpha_col not in self.df.columns:
-            # don't derive spectral indices if frequencies are <10% apart
+            # Don't derive spectral indices if frequencies are <10% apart
             if np.abs(self.freq[cat_name]/self.freq[self.name]-1) <= 0.1:
                 print("{0} and {1} are too close to derive spectral indices.".format(self.name,
                                                                                      cat_name))
@@ -1231,11 +1231,11 @@ class catalogue(object):
         if fig_extn is not None and self.verbose:
             print("Writting SED plots to 'SEDs/'")
 
-        # iterate through all sources and derive SED model where possible
+        # Iterate through all sources and derive SED model where possible
         for i in range(len(self.df)):
             fluxes, errs, freqs = np.array([]), np.array([]), np.array([])
 
-            # iterate through all catalogues and only take fluxes
+            # Iterate through all catalogues and only take fluxes
             # that aren't nan and optionally don't include main catalogue
             for cat in self.flux:
                 flux = self.flux[cat].iloc[i]
@@ -1244,7 +1244,7 @@ class catalogue(object):
                     errs = np.append(errs, self.flux_err[cat].iloc[i])
                     freqs = np.append(freqs, self.freq[cat])
 
-            # append GLEAM sub-band measurements according to input type (int or peak)
+            # Append GLEAM sub-band measurements according to input type (int or peak)
             if GLEAM_subbands is not None and 'GLEAM' in self.cat_list:
                 GLEAM_freqs, GLEAM_fluxes, GLEAM_errs = np.array([]), np.array([]), np.array([])
                 for col in self.df.columns:
@@ -1260,7 +1260,7 @@ class catalogue(object):
                                                self.df.loc[i, 'GLEAM_err_{0}_flux_{1}'.format(
                                                    GLEAM_subbands, GLEAM_freq)])
 
-                # optionally average sub-bands together
+                # Optionally average sub-bands together
                 if GLEAM_nchans is not None:
                     index = 0
                     used_index = 0
@@ -1276,34 +1276,34 @@ class catalogue(object):
                     GLEAM_fluxes = GLEAM_fluxes[:used_index]
                     GLEAM_errs = GLEAM_errs[:used_index]
 
-                # append GLEAM measurements
+                # Append GLEAM measurements
                 freqs = np.append(freqs, GLEAM_freqs)
                 fluxes = np.append(fluxes, GLEAM_fluxes)
                 errs = np.append(errs, GLEAM_errs)
 
-            # attempt to fit models if more than one frequency
+            # Attempt to fit models if more than one frequency
             if len(freqs) > 1:
                 figname = fig_extn
-                # use island ID or otherwise row index for figure name
+                # Use island ID or otherwise row index for figure name
                 if figname is not None:
                     if self.island_col is not None:
                         name = self.df.loc[i, self.island_col]
                     else:
                         name = i
                     figname = '{0}.{1}'.format(name, figname)
-                # fit SED models
+                # Fit SED models
                 mods, names, params, errors, fluxes, rcs, BICs = SED(self.freq[self.name],
                                                                      freqs, fluxes, errs,
                                                                      models, figname=figname)
 
-                # append best fitted flux and ratio
+                # Append best fitted flux and ratio
                 if len(mods) > 0:
                     best_flux = fluxes[np.where(BICs == min(BICs))[0][0]]
                     self.df.loc[i, best_fitted_flux] = best_flux
                     if self.name in self.flux:
                         self.df.loc[i, best_fitted_ratio] = best_flux / self.flux[self.name][i]
 
-                # iterate through each model and append fitted parameters
+                # Iterate through each model and append fitted parameters
                 for j, model in enumerate(mods):
 
                     fitted_flux_col = model + fitted_flux_suffix
@@ -1322,17 +1322,17 @@ class catalogue(object):
                     self.df.loc[i, BIC_col] = BICs[j]
 
                     for k, name in enumerate(names[j]):
-                        # derive column name for each parameter
+                        # Derive column name for each parameter
                         para_col = '{0}_{1}'.format(model, name)
                         para_err_col = '{0}_err'.format(para_col)
 
                         if para_col not in self.df.columns:
-                            # add new columns for each parameter and uncertainty, the fitted
+                            # Add new columns for each parameter and uncertainty, the fitted
                             # flux and the ratio between this and the measured flux
                             self.df[para_col] = np.full(len(self.df), np.nan)
                             self.df[para_err_col] = np.full(len(self.df), np.nan)
 
-                        # store parameter value, error, fitted flux and ratio
+                        # Store parameter value, error, fitted flux and ratio
                         self.df.loc[i, para_col] = params[j][k]
                         self.df.loc[i, para_err_col] = errors[j][k]
 
@@ -1359,7 +1359,7 @@ class catalogue(object):
         write_any : bool
             Write any files whatsoever?"""
 
-        # create dictionary of arguments, append verbose and create new catalogue instance
+        # Create dictionary of arguments, append verbose and create new catalogue instance
         config_dic = config2dic(config_file, main_dir, verbose=verbose)
         config_dic.update({'verbose': verbose})
         if redo:
