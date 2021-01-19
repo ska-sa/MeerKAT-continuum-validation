@@ -18,7 +18,7 @@ Usage:
   [-c --correct=<level>]
 
 Required:
-  -I --fits=<img>           A fits continuum image [default: None].
+  -I --fits=<img>           A FITS continuum image [default: None].
   AND/OR
   -M --main=<main-cat>     Use this catalogue config file (overwrites options -p and -t).
   Default is to run Aegean [default: None].
@@ -28,9 +28,9 @@ Options:
   -C --catalogues=<list>    A comma-separated list of filepaths to catalogue config files
   corresponding to catalogues to use (will look in --main-dir for each file not found in
   given path) [default: NVSS_config.txt,SUMSS_config.txt,GLEAM_config.txt,TGSS_config.txt].
-  -N --noise=<map>          Use this fits image of the local rms. Default is to run BANE
+  -N --noise=<map>          Use this FITS image of the local rms. Default is to run BANE
   [default: None].
-  -F --filter=<config>      A config file for filtering the sources in the input fits file
+  -F --filter=<config>      A config file for filtering the sources in the input FITS file
   [default: None].
   -R --snr=<ratio>          The signal-to-noise ratio cut to apply to the input catalogue
   and the source counts (doesn't affect source finding) [default: 5.0].
@@ -41,7 +41,7 @@ Options:
   catalogues already exist [default: False].
   -p --peak-flux            Use the peak flux rather than the integrated flux of the input image
   (not used when -A used) [default: False].
-  -w --write                Write intermedidocoptsate files generated during processing (e.g.
+  -w --write                Write intermediate files generated during processing (e.g.
   cross-matched and pre-filtered catalogues, etc). This will save having to reprocess the
   cross-matches, etc when executing the script again. [default: False].
   -x --no-write             Don't write any files except the html report and any files output from
@@ -61,8 +61,8 @@ Options:
   [default: html].
   -a --aegean=<params>      A single string with any extra paramters to pass into Aegean
   (except cores, noise, background, and table) [default: --floodclip=3].
-  -c --correct=<level>      Correct the input fits image, write to 'name_corrected.fits'
-  and use this to run through 2nd iteration of validation. Fits image is corrected according
+  -c --correct=<level>      Correct the input FITS image, write to 'name_corrected.fits'
+  and use this to run through 2nd iteration of validation. FITS image is corrected according
   to input level (0: none, 1: positions, 2: positions + fluxes) [default: 0]."""
 
 import glob
@@ -79,29 +79,30 @@ from functions import parse_string, new_path, changeDir, find_file, config2dic
 from radio_image import radio_image
 from report import report
 
+cf = currentframe()
+WARN = '\n\033[91mWARNING: \033[0m' + getframeinfo(cf).filename
+
 
 def process_args():
     """Process args to be in the required formats."""
-    cf = currentframe()
-    WARN = '\n\033[91mWARNING: \033[0m' + getframeinfo(cf).filename
     try:
         args = docopt(__doc__)
         if args['--main'] == 'None':
             if args['--fits'] == 'None' or args['--noise'] != 'None':
                 raise SyntaxError
     except SyntaxError:
-        warnings.warn_explicit("""You must pass in a fits image (option -I) and/or the main catalogue
+        warnings.warn_explicit("""You must pass in a FITS image (option -I) and/or the main catalogue
         (option -M).\n""", UserWarning, WARN, cf.f_lineno)
         warnings.warn_explicit("""When no catalogue is passed in, you cannot input a noise map
         (option -N).\n""", UserWarning, WARN, cf.f_lineno)
         warnings.warn_explicit("""Use option -h to see usage.\n""", UserWarning, WARN, cf.f_lineno)
         sys.exit()
 
-    # don't use normal display environment unless user wants to view plots on screen
+    # Don't use normal display environment unless user wants to view plots on screen
     if args['--source'] != 'screen':
         mpl.use('Agg')
 
-    # find directory that contains all the necessary files
+    # Find directory that contains all the necessary files
     main_dir = args['--main-dir']
     if main_dir.startswith('$ACES') and 'ACES' in list(os.environ.keys()):
         ACES = os.environ['ACES']
@@ -110,7 +111,7 @@ def process_args():
         split = sys.argv[0].split('/')
         script_dir = '/'.join(split[:-1])
         print("Looking in '{0}' for necessary files.".format(script_dir))
-        if 'Radio_cont_main' in split[-1]:
+        if 'Radio_continuum_validation' in split[-1]:
             main_dir = script_dir
         else:
             warnings.warn_explicit("""Can't find necessary files in main directory
@@ -123,7 +124,7 @@ def process_args():
     parms['verbose'] = args['--verbose']
     parms['source'] = args['--source']
     parms['refind'] = args['--refind']
-    parms['redo'] = args['--redo'] or parms['refind']  # force redo when refind is True
+    parms['redo'] = args['--redo'] or parms['refind']  # Force redo when refind is True
     parms['use_peak'] = args['--peak-flux']
     parms['write_any'] = not args['--no-write']
     parms['write_all'] = args['--write']
@@ -148,11 +149,11 @@ def process_args():
     else:
         parms['fit_flux'] = True
 
-    # force write_all=False write_any=False
+    # Force write_all=False write_any=False
     if not parms['write_any']:
         parms['write_all'] = False
 
-    # add '../' to relative paths of these files, since
+    # Add '../' to relative paths of these files, since
     # we'll create and move into a directory for output files
     parms['filter_config'] = new_path(parse_string(args['--filter']))
     parms['main_cat_config'] = parse_string(args['--main'])
@@ -162,7 +163,7 @@ def process_args():
 
 
 def create_suffix(snr, use_peak):
-    # add S/N and peak/int to output directory/file names
+    # Add S/N and peak/int to output directory/file names
     suffix = 'snr{0}_'.format(snr)
     if use_peak:
         suffix += 'peak'
@@ -173,7 +174,7 @@ def create_suffix(snr, use_peak):
 
 def create_cat(suffix, args):
     """Extract sources for a given image using Aegean or read in supplied catalogue."""
-    # Load in fits image
+    # Load in FITS image
     if args['img'] is not None:
         changeDir(args['img'], suffix, verbose=args['verbose'])
         img = new_path(args['img'])
@@ -220,7 +221,7 @@ def filter_sources(suffix, args, cat, image):
                       plot_to=args['source'], redo=args['redo'], src_cnt_bins=args['nbins'],
                       write=args['write_any'])
 
-    # use config file for filtering sources if it exists
+    # Use config file for filtering sources if it exists
     if args['filter_config'] is not None:
         if args['verbose']:
             print("Using config file '{0}' for filtering.".format(args['filter_config']))
@@ -238,12 +239,12 @@ def filter_sources(suffix, args, cat, image):
 
 def match_cat(args, cat):
     """Match the input catalogue/image sources to sources in a list of given catalogues"""
-    # process each catalogue object according to list of input catalogue config files
-    # this will cut out a box, cross-match to this instance, and derive the spectral index.
+    # Process each catalogue object according to list of input catalogue config files.
+    # This will cut out a box, cross-match to this instance, and derive the spectral index.
     for config_file in args['config_files']:
         if args['verbose']:
             print("Using config file '{0}' for catalogue.".format(config_file))
-        config_file = config_file.strip()  # in case user put a space
+        config_file = config_file.strip()  # In case user put a space
         config_file = find_file(config_file, args['main_dir'], verbose=args['verbose'])
         cat.process_config_file(config_file, args['main_dir'], redo=args['redo'],
                                 verbose=args['verbose'], write_all=args['write_all'],
@@ -260,14 +261,14 @@ def match_cat(args, cat):
 def validate_cat(args, cat, image, myReport):
     """Produce validation report for each cross-matched survey."""
     for cat_name in cat.cat_list[1:]:
-        # print "Would validate {0}".format(cat_name)
+        # Print "Would validate {0}".format(cat_name)
         if cat.count[cat_name] > 1:
             myReport.validate(cat.name, cat_name, redo=args['redo'])
 
-    # write validation summary table and close html file
+    # Write validation summary table and close html file
     myReport.write_html_end()
 
-    # correct image
+    # Correct image
     flux_factor = 1.0
     if args['level'] == 2:
         flux_factor = myReport.metric_val['Flux Ratio']
