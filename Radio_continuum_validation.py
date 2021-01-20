@@ -83,10 +83,10 @@ cf = currentframe()
 WARN = '\n\033[91mWARNING: \033[0m' + getframeinfo(cf).filename
 
 
-def process_args():
+def process_args(script, argv):
     """Process args to be in the required formats."""
     try:
-        args = docopt(__doc__)
+        args = docopt(__doc__, argv=argv)
         if args['--main'] == 'None':
             if args['--fits'] == 'None' or args['--noise'] != 'None':
                 raise SyntaxError
@@ -108,7 +108,7 @@ def process_args():
         ACES = os.environ['ACES']
         main_dir = main_dir.replace('$ACES', ACES)
     if not os.path.exists('{0}/requirements.txt'.format(main_dir)):
-        split = sys.argv[0].split('/')
+        split = script.split('/')
         script_dir = '/'.join(split[:-1])
         print("Looking in '{0}' for necessary files.".format(script_dir))
         if 'Radio_continuum_validation' in split[-1]:
@@ -277,9 +277,17 @@ def validate_cat(args, cat, image, myReport):
                           flux_factor=flux_factor)
 
 
-def main():
-    """Perform QA validation on an input image or catalogue."""
-    args = process_args()
+def main(script, argv):
+    """Perform QA validation on an input image or catalogue.
+
+    Parameters
+    ----------
+    script : str
+        filename of script including its full path
+    arv : list of str
+        list of arguments to script"""
+
+    args = process_args(script, argv)
     suffix = create_suffix(args['snr'], args['use_peak'])
 
     cat, image = create_cat(suffix, args)
@@ -289,4 +297,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[0], sys.argv[1:])
