@@ -1,4 +1,4 @@
-flux_lim=1e-3
+flux_lim=5e-4
 SNR=0
 ratio_frac=0
 reject_blends=True

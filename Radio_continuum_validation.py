@@ -18,7 +18,7 @@ Usage:
   [-c --correct=<level>]
 
 Required:
-  -I --fits=<img>           A fits continuum image [default: None].
+  -I --fits=<img>           A FITS continuum image [default: None].
   AND/OR
   -M --main=<main-cat>     Use this catalogue config file (overwrites options -p and -t).
   Default is to run Aegean [default: None].
@@ -28,9 +28,9 @@ Options:
   -C --catalogues=<list>    A comma-separated list of filepaths to catalogue config files
   corresponding to catalogues to use (will look in --main-dir for each file not found in
   given path) [default: NVSS_config.txt,SUMSS_config.txt,GLEAM_config.txt,TGSS_config.txt].
-  -N --noise=<map>          Use this fits image of the local rms. Default is to run BANE
+  -N --noise=<map>          Use this FITS image of the local rms. Default is to run BANE
   [default: None].
-  -F --filter=<config>      A config file for filtering the sources in the input fits file
+  -F --filter=<config>      A config file for filtering the sources in the input FITS file
   [default: None].
   -R --snr=<ratio>          The signal-to-noise ratio cut to apply to the input catalogue
   and the source counts (doesn't affect source finding) [default: 5.0].
@@ -41,9 +41,9 @@ Options:
   catalogues already exist [default: False].
   -p --peak-flux            Use the peak flux rather than the integrated flux of the input image
   (not used when -A used) [default: False].
-  -w --write                Write intermediate files generated during processing (e.g. cross-matched
-  and pre-filtered catalogues, etc). This will save having to reprocess the cross-matches, etc when
-  executing the script again. [default: False].
+  -w --write                Write intermediate files generated during processing (e.g.
+  cross-matched and pre-filtered catalogues, etc). This will save having to reprocess the
+  cross-matches, etc when executing the script again. [default: False].
   -x --no-write             Don't write any files except the html report and any files output from
   BANE and Aegean. [default: False].
   -m --SEDs=<models>        A comma-separated list of SED models to fit to the radio spectra
@@ -61,8 +61,8 @@ Options:
   [default: html].
   -a --aegean=<params>      A single string with any extra paramters to pass into Aegean
   (except cores, noise, background, and table) [default: --floodclip=3].
-  -c --correct=<level>      Correct the input fits image, write to 'name_corrected.fits'
-  and use this to run through 2nd iteration of validation. Fits image is corrected according
+  -c --correct=<level>      Correct the input FITS image, write to 'name_corrected.fits'
+  and use this to run through 2nd iteration of validation. FITS image is corrected according
   to input level (0: none, 1: positions, 2: positions + fluxes) [default: 0]."""
 
 import glob
@@ -79,171 +79,222 @@ from functions import parse_string, new_path, changeDir, find_file, config2dic
 from radio_image import radio_image
 from report import report
 
-
-# Set my own obvious warning output
 cf = currentframe()
 WARN = '\n\033[91mWARNING: \033[0m' + getframeinfo(cf).filename
 
-# Raise error if user tries to pass in noise map and then run Aegean
-try:
-    args = docopt(__doc__)
-    if args['--main'] == 'None':
-        if args['--fits'] == 'None' or args['--noise'] != 'None':
-            raise SyntaxError
-except SyntaxError:
-    warnings.warn_explicit("""You must pass in a fits image (option -I) and/or the main catalogue
-    (option -M).\n""", UserWarning, WARN, cf.f_lineno)
-    warnings.warn_explicit("""When no catalogue is passed in, you cannot input a noise map
-    (option -N).\n""", UserWarning, WARN, cf.f_lineno)
-    warnings.warn_explicit("""Use option -h to see usage.\n""", UserWarning, WARN, cf.f_lineno)
-    sys.exit()
 
-# don't use normal display environment unless user wants to view plots on screen
-if args['--source'] != 'screen':
-    mpl.use('Agg')
+def process_args(script, argv):
+    """Process args to be in the required formats."""
+    try:
+        args = docopt(__doc__, argv=argv)
+        if args['--main'] == 'None':
+            if args['--fits'] == 'None' or args['--noise'] != 'None':
+                raise SyntaxError
+    except SyntaxError:
+        warnings.warn_explicit("""You must pass in a FITS image (option -I) and/or the main catalogue
+        (option -M).\n""", UserWarning, WARN, cf.f_lineno)
+        warnings.warn_explicit("""When no catalogue is passed in, you cannot input a noise map
+        (option -N).\n""", UserWarning, WARN, cf.f_lineno)
+        warnings.warn_explicit("""Use option -h to see usage.\n""", UserWarning, WARN, cf.f_lineno)
+        sys.exit()
 
-# find directory that contains all the necessary files
-main_dir = args['--main-dir']
-if main_dir.startswith('$ACES') and 'ACES' in list(os.environ.keys()):
-    ACES = os.environ['ACES']
-    main_dir = main_dir.replace('$ACES', ACES)
-if not os.path.exists('{0}/requirements.txt'.format(main_dir)):
-    split = sys.argv[0].split('/')
-    script_dir = '/'.join(split[:-1])
-    print("Looking in '{0}' for necessary files.".format(script_dir))
-    if 'Radio_continuum_validation' in split[-1]:
-        main_dir = script_dir
+    # Don't use normal display environment unless user wants to view plots on screen
+    if args['--source'] != 'screen':
+        mpl.use('Agg')
+
+    # Find directory that contains all the necessary files
+    main_dir = args['--main-dir']
+    if main_dir.startswith('$ACES') and 'ACES' in list(os.environ.keys()):
+        ACES = os.environ['ACES']
+        main_dir = main_dir.replace('$ACES', ACES)
+    if not os.path.exists('{0}/requirements.txt'.format(main_dir)):
+        split = script.split('/')
+        script_dir = '/'.join(split[:-1])
+        print("Looking in '{0}' for necessary files.".format(script_dir))
+        if 'Radio_continuum_validation' in split[-1]:
+            main_dir = script_dir
+        else:
+            warnings.warn_explicit("""Can't find necessary files in main directory
+            - {0}.\n""".format(main_dir), UserWarning, WARN, cf.f_lineno)
+
+    # Set paramaters passed in by user
+    parms = {}
+    parms['main_dir'] = main_dir
+    parms['img'] = parse_string(args['--fits'])
+    parms['verbose'] = args['--verbose']
+    parms['source'] = args['--source']
+    parms['refind'] = args['--refind']
+    parms['redo'] = args['--redo'] or parms['refind']  # Force redo when refind is True
+    parms['use_peak'] = args['--peak-flux']
+    parms['write_any'] = not args['--no-write']
+    parms['write_all'] = args['--write']
+    parms['aegean_params'] = args['--aegean']
+    parms['scope'] = args['--telescope']
+    parms['ncores'] = int(args['--ncores'])
+    parms['nbins'] = int(args['--nbins'])
+    parms['level'] = int(args['--correct'])
+    parms['snr'] = float(args['--snr'])
+
+    if '*' in args['--catalogues']:
+        parms['config_files'] = glob.glob(args['--catalogues'])
+        print(parms['config_files'])
     else:
-        warnings.warn_explicit("""Can't find necessary files in main directory
-        - {0}.\n""".format(main_dir), UserWarning, WARN, cf.f_lineno)
+        parms['config_files'] = args['--catalogues'].split(',')
 
-# Set paramaters passed in by user
-img = parse_string(args['--fits'])
-verbose = args['--verbose']
-source = args['--source']
-refind = args['--refind']
-redo = args['--redo'] or refind  # force redo when refind is True
-use_peak = args['--peak-flux']
-write_any = not args['--no-write']
-write_all = args['--write']
-aegean_params = args['--aegean']
-scope = args['--telescope']
-ncores = int(args['--ncores'])
-nbins = int(args['--nbins'])
-level = int(args['--correct'])
-snr = float(args['--snr'])
+    parms['SEDs'] = args['--SEDs'].split(',')
+    parms['SEDextn'] = parse_string(args['--SEDfig'])
+    if args['--SEDs'] == 'None':
+        parms['SEDs'] = 'pow'
+        parms['fit_flux'] = False
+    else:
+        parms['fit_flux'] = True
 
-if '*' in args['--catalogues']:
-    config_files = glob.glob(args['--catalogues'])
-    print(config_files)
-else:
-    config_files = args['--catalogues'].split(',')
-SEDs = args['--SEDs'].split(',')
-SEDextn = parse_string(args['--SEDfig'])
-if args['--SEDs'] == 'None':
-    SEDs = 'pow'
-    fit_flux = False
-else:
-    fit_flux = True
+    # Force write_all=False write_any=False
+    if not parms['write_any']:
+        parms['write_all'] = False
 
-# force write_all=False write_any=False
-if not write_any:
-    write_all = False
+    # Add '../' to relative paths of these files, since
+    # we'll create and move into a directory for output files
+    parms['filter_config'] = new_path(parse_string(args['--filter']))
+    parms['main_cat_config'] = parse_string(args['--main'])
+    parms['noise'] = new_path(parse_string(args['--noise']))
 
-# add '../' to relative paths of these files, since
-# we'll create and move into a directory for output files
-filter_config = new_path(parse_string(args['--filter']))
-main_cat_config = parse_string(args['--main'])
-noise = new_path(parse_string(args['--noise']))
+    return parms
 
-if __name__ == "__main__":
 
-    # add S/N and peak/int to output directory/file names
+def create_suffix(snr, use_peak):
+    # Add S/N and peak/int to output directory/file names
     suffix = 'snr{0}_'.format(snr)
     if use_peak:
         suffix += 'peak'
     else:
         suffix += 'int'
+    return suffix
 
-    # Load in fits image
-    if img is not None:
-        changeDir(img, suffix, verbose=verbose)
-        img = new_path(img)
-        image = radio_image(img, verbose=verbose, rms_map=noise)
+
+def create_cat(suffix, args):
+    """Extract sources for a given image using Aegean or read in supplied catalogue."""
+    # Load in FITS image
+    if args['img'] is not None:
+        changeDir(args['img'], suffix, verbose=args['verbose'])
+        img = new_path(args['img'])
+        image = radio_image(img, verbose=args['verbose'], rms_map=args['noise'])
 
         # Run BANE if user hasn't input noise map
-        if noise is None:
-            image.run_BANE(ncores=ncores, redo=refind)
+        if args['noise'] is None:
+            image.run_BANE(ncores=args['ncores'], redo=args['refind'])
 
         # Run Aegean and create main catalogue object from its output
-        if main_cat_config is None:
-            image.run_Aegean(ncores=ncores, redo=refind, params=aegean_params, write=write_any)
-            cat = catalogue(image.cat_comp, scope, finder='aegean', image=image, verbose=verbose,
-                            autoload=False, use_peak=use_peak)
+        if args['main_cat_config'] is None:
+            image.run_Aegean(ncores=args['ncores'], redo=args['refind'],
+                             params=args['aegean_params'], write=args['write_any'])
+            cat = catalogue(image.cat_comp, args['scope'], finder='aegean', image=image,
+                            verbose=args['verbose'], autoload=False, use_peak=args['use_peak'])
     else:
-        changeDir(main_cat_config, suffix, verbose=verbose)
+        changeDir(args['main_cat_config'], suffix, verbose=args['verbose'])
         image = None
 
-    if main_cat_config is not None:
-        main_cat_config = new_path(main_cat_config)
+    if args['main_cat_config'] is not None:
+        args['main_cat_config'] = new_path(args['main_cat_config'])
 
         # Use input catalogue config file
-        if verbose:
-            print("Using config file '{0}' for main catalogue.".format(main_cat_config))
-        main_cat_config = find_file(main_cat_config, main_dir, verbose=verbose)
-        main_cat_config_dic = config2dic(main_cat_config, main_dir, verbose=verbose)
-        main_cat_config_dic.update({'image': image, 'verbose': verbose, 'autoload': False})
+        if args['verbose']:
+            print("Using config file '{0}' for main catalogue.".format(args['main_cat_config']))
+        args['main_cat_config'] = find_file(args['main_cat_config'], args['main_dir'],
+                                            verbose=args['verbose'])
+        main_cat_config_dic = config2dic(args['main_cat_config'], args['main_dir'],
+                                         verbose=args['verbose'])
+        main_cat_config_dic.update({'image': image, 'verbose': args['verbose'], 'autoload': False})
         cat = catalogue(**main_cat_config_dic)
 
+    return cat, image
+
+
+def filter_sources(suffix, args, cat, image):
+    """Filter out sources according to given criteria."""
     # Filter out sources below input SNR, and set key fields and create report object before
     # filtering catalogue further so source counts can be written for all sources above input SNR
-    cat.filter_sources(SNR=snr, redo=redo, write=write_any, verbose=verbose,
-                       file_suffix='_snr{0}'.format(snr))
+    cat.filter_sources(SNR=args['snr'], redo=args['redo'], write=args['write_any'],
+                       verbose=args['verbose'], file_suffix='_snr{0}'.format(args['snr']))
     cat.set_specs(image)
-    myReport = report(cat, main_dir, img=image, verbose=verbose, plot_to=source, redo=redo,
-                      src_cnt_bins=nbins, write=write_any)
+    myReport = report(cat, args['main_dir'], img=image, verbose=args['verbose'],
+                      plot_to=args['source'], redo=args['redo'], src_cnt_bins=args['nbins'],
+                      write=args['write_any'])
 
-    # use config file for filtering sources if it exists
-    if filter_config is not None:
-        if verbose:
-            print("Using config file '{0}' for filtering.".format(filter_config))
-        filter_dic = config2dic(filter_config, main_dir, verbose=verbose)
-        filter_dic.update({'redo': redo, 'write': write_all, 'verbose': verbose})
+    # Use config file for filtering sources if it exists
+    if args['filter_config'] is not None:
+        if args['verbose']:
+            print("Using config file '{0}' for filtering.".format(args['filter_config']))
+        filter_dic = config2dic(args['filter_config'], args['main_dir'], verbose=args['verbose'])
+        filter_dic.update({'redo': args['redo'], 'write': args['write_all'],
+                          'verbose': args['verbose']})
         cat.filter_sources(**filter_dic)
     else:
         # Only use reliable point sources for comparison
         cat.filter_sources(flux_lim=1e-3, ratio_frac=1.4, reject_blends=True, flags=True,
-                           psf_tol=1.5, resid_tol=3, redo=redo, write=write_all, verbose=verbose)
+                           psf_tol=1.5, resid_tol=3, redo=args['redo'], write=args['write_all'],
+                           verbose=args['verbose'])
+    return myReport
 
-    # process each catalogue object according to list of input catalogue config files
-    # this will cut out a box, cross-match to this instance, and derive the spectral index.
-    for config_file in config_files:
-        if verbose:
+
+def match_cat(args, cat):
+    """Match the input catalogue/image sources to sources in a list of given catalogues"""
+    # Process each catalogue object according to list of input catalogue config files.
+    # This will cut out a box, cross-match to this instance, and derive the spectral index.
+    for config_file in args['config_files']:
+        if args['verbose']:
             print("Using config file '{0}' for catalogue.".format(config_file))
-        config_file = config_file.strip()  # in case user put a space
-        config_file = find_file(config_file, main_dir, verbose=verbose)
-        cat.process_config_file(config_file, main_dir, redo=redo, verbose=verbose,
-                                write_all=write_all, write_any=write_any)
+        config_file = config_file.strip()  # In case user put a space
+        config_file = find_file(config_file, args['main_dir'], verbose=args['verbose'])
+        cat.process_config_file(config_file, args['main_dir'], redo=args['redo'],
+                                verbose=args['verbose'], write_all=args['write_all'],
+                                write_any=args['write_any'])
 
     # Derive spectral indices using all fluxes except from main catalogue, and derive the
     # flux at this frequency
     if len(cat.cat_list) > 1:
-        cat.fit_spectra(redo=redo, models=SEDs, GLEAM_subbands='int', GLEAM_nchans=None,
-                        cat_name=None, write=write_any, fit_flux=fit_flux, fig_extn=SEDextn)
+        cat.fit_spectra(redo=args['redo'], models=args['SEDs'], GLEAM_subbands='int',
+                        GLEAM_nchans=None, cat_name=None, write=args['write_any'],
+                        fit_flux=args['fit_flux'], fig_extn=args['SEDextn'])
 
-    # Produce validation report for each cross-matched survey
+
+def validate_cat(args, cat, image, myReport):
+    """Produce validation report for each cross-matched survey."""
     for cat_name in cat.cat_list[1:]:
-        # print "Would validate {0}".format(cat_name)
+        # Print "Would validate {0}".format(cat_name)
         if cat.count[cat_name] > 1:
-            myReport.validate(cat.name, cat_name, redo=redo)
+            myReport.validate(cat.name, cat_name, redo=args['redo'])
 
-    # write validation summary table and close html file
+    # Write validation summary table and close html file
     myReport.write_html_end()
 
-    # correct image
+    # Correct image
     flux_factor = 1.0
-    if level == 2:
-        flux_factor = myReport.metric_val['ratio']
-    if level in (1, 2):
-        image.correct_img(myReport.metric_val['dRA'], myReport.metric_val['dDEC'],
+    if args['level'] == 2:
+        flux_factor = myReport.metric_val['Flux Ratio']
+    if args['level'] in (1, 2):
+        image.correct_img(myReport.metric_val['RA Offset'], myReport.metric_val['DEC Offset'],
                           flux_factor=flux_factor)
+
+
+def main(script, argv):
+    """Perform QA validation on an input image or catalogue.
+
+    Parameters
+    ----------
+    script : str
+        filename of script including its full path
+    arv : list of str
+        list of arguments to script"""
+
+    args = process_args(script, argv)
+    suffix = create_suffix(args['snr'], args['use_peak'])
+
+    cat, image = create_cat(suffix, args)
+    myReport = filter_sources(suffix, args, cat, image)
+    match_cat(args, cat)
+    validate_cat(args, cat, image, myReport)
+
+
+if __name__ == "__main__":
+    main(sys.argv[0], sys.argv[1:])
