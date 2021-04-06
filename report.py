@@ -266,8 +266,6 @@ class report(object):
         <h4 align="middle"><i>File: '{0}'</i></h3>
         <table class="reportTable">
             <tr>
-                <th>ASKAPsoft<br>version</th>
-                <th>Pipeline<br>version</th>
                 <th>Synthesised Beam<br>(arcsec)</th>
                 <th>Median r.m.s.<br>(uJy)</th>
                 <th>Image peak<br>(Jy)</th>
@@ -275,17 +273,13 @@ class report(object):
                 <th>Sky Area<br>(deg<sup>2</sup>)</th>
             </tr>
             <tr>
-                <td>{1}</td>
-                <td>{2}</td>
-                <td>{3:.1f} x {4:.1f}</td>
-                <td>{5}</td>
+                <td>{1:.1f} x {2:.1f}</td>
+                <td>{3}</td>
+                <td>{4:.2f}</td>
+                <td>{5:.0E}</td>
                 <td>{6:.2f}</td>
-                <td>{7:.0E}</td>
-                <td>{8:.2f}</td>
             </tr>
         </table>""".format(img.name,
-                           img.soft_version,
-                           img.pipeline_version,
                            img.bmaj,
                            img.bmin,
                            self.cat.img_rms,
