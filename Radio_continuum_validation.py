@@ -15,7 +15,7 @@ Usage:
   [-w --write] [-x --no-write] [-m --SEDs=<models>] [-e --SEDfig=<extn>]
   [-t --telescope=<name>] [-d --main-dir=<path>] [-n --ncores=<num>]
   [-b --nbins=<num>] [-s --source=<src>] [-a --aegean-params]
-  [-c --correct=<level>]
+  [-c --correct=<level>] [-l --limit_chi=<float>]
 
 Required:
   -I --fits=<img>           A FITS continuum image [default: None].
@@ -63,7 +63,9 @@ Options:
   (except cores, noise, background, and table) [default: --floodclip=3].
   -c --correct=<level>      Correct the input FITS image, write to 'name_corrected.fits'
   and use this to run through 2nd iteration of validation. FITS image is corrected according
-  to input level (0: none, 1: positions, 2: positions + fluxes) [default: 0]."""
+  to input level (0: none, 1: positions, 2: positions + fluxes) [default: 0]
+  -l --limit_chi=<float>    Lower flux limit [Jy] when calculating  source counts chi squared value,
+  negative value means no limit is applied [default: 500e-6]."""
 
 import glob
 import os
@@ -134,6 +136,10 @@ def process_args(script, argv):
     parms['nbins'] = int(args['--nbins'])
     parms['level'] = int(args['--correct'])
     parms['snr'] = float(args['--snr'])
+    if float(args['--limit_chi']) < 0:
+        parms['limit_chi'] = None
+    else:
+        parms['limit_chi'] = float(args['--limit_chi'])
 
     if '*' in args['--catalogues']:
         parms['config_files'] = glob.glob(args['--catalogues'])
@@ -219,7 +225,7 @@ def filter_sources(suffix, args, cat, image):
     cat.set_specs(image)
     myReport = report(cat, args['main_dir'], img=image, verbose=args['verbose'],
                       plot_to=args['source'], redo=args['redo'], src_cnt_bins=args['nbins'],
-                      write=args['write_any'])
+                      write=args['write_any'], limit_chi=args['limit_chi'])
 
     # Use config file for filtering sources if it exists
     if args['filter_config'] is not None:

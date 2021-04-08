@@ -34,7 +34,7 @@ class report(object):
                                                         'marker': 'o', 'color': 'b'},
                  colour_markers={'marker': 'o', 's': 30, 'linewidth': 0}, cmap='plasma',
                  cbins=20, arrows={'color': 'r', 'width': 0.04, 'scale': 20},
-                 src_cnt_bins=50, redo=False, write=True, verbose=True):
+                 src_cnt_bins=50, redo=False, write=True, verbose=True, limit_chi=None):
 
         """Initialise a report object for writing a html report of the image and cross-matches,
         including plots.
@@ -102,6 +102,7 @@ class report(object):
         self.redo = redo
         self.write = write
         self.verbose = verbose
+        self.limit_chi = limit_chi
 
         # set name of directory for figures and create if doesn't exist
         self.figDir = 'figures'
@@ -177,7 +178,8 @@ class report(object):
         # solid angle
         if self.cat.name in list(self.cat.flux.keys()):
             self.source_counts(self.cat.flux[self.cat.name], self.cat.freq[self.cat.name],
-                               rms_map=rms_map, solid_ang=solid_ang, write=self.write)
+                               rms_map=rms_map, solid_ang=solid_ang, write=self.write,
+                               limit_chi=self.limit_chi)
         else:
             self.sc_red_chi_sq = -1
         # write cross-match table header
@@ -731,7 +733,7 @@ class report(object):
                   handles=[data],
                   redo=self.redo)
 
-    def source_counts(self, fluxes, freq, rms_map=None, solid_ang=0, write=True):
+    def source_counts(self, fluxes, freq, rms_map=None, solid_ang=0, write=True, limit_chi=None):
 
         """Compute and plot the (differential euclidean) source counts based on the input flux densities.
 
@@ -750,7 +752,9 @@ class report(object):
             A fixed solid angle over which the source counts are computed. Only used when
             rms_map is None.
         write : bool
-            Write the source counts to file."""
+            Write the source counts to file.
+        limit_chi : float
+            Limit the chi squared calculation to fluxes above this limit."""
 
         # Derive file names based on user input
         filename = 'screen'
@@ -887,8 +891,18 @@ class report(object):
 
         # Derive the square of the residuals (chi squared), and their sum
         # Divided by the number of data points (reduced chi squared)
-        chi = ((df['logCounts']-f(df['logS']))/df['logErrDown'])**2
-        red_chi_sq = np.sum(chi)/len(df)
+        def calc_red_chi_sq(y, x, yerr):
+            chi = ((y-f(x))/yerr)**2
+            red_chi_sq = np.sum(chi)/len(y)
+            return red_chi_sq
+
+        # Only calculate reduced chi squared to the specified flux limit
+        if limit_chi is not None:
+            idx = np.where(df['logS'] > np.log10(limit_chi))[0]
+            df_idx = df.loc[idx]
+            red_chi_sq = calc_red_chi_sq(df_idx['logCounts'], df_idx['logS'], df_idx['logErrDown'])
+        else:
+            red_chi_sq = calc_red_chi_sq(df['logCounts'], df['logS'], df['logErrDown'])
 
         # Store reduced chi squared value
         self.sc_red_chi_sq = red_chi_sq
@@ -902,7 +916,11 @@ class report(object):
                 'Norris+11</a>'
             txt += ' (updated from <a href="http://adsabs.harvard.edu/abs/2003AJ....125..465H"'\
                 '>Hopkins+03</a>)\n'
-        txt += r'$\chi^2_{red}$: %.2f' % red_chi_sq
+        # Indicate flux limit in label if one is used
+        if limit_chi is not None:
+            txt += r'$\chi^2_{red}$: %.2f for S > %.2f $\mu$Jy' % (red_chi_sq, limit_chi / 1e-6)
+        else:
+            txt += r'$\chi^2_{red}$: %.2f' % red_chi_sq
 
         # Legend labels for the Norris data and line, and the ASKAP data
         xlab = 'Norris+11'
@@ -926,7 +944,8 @@ class report(object):
                   leg_labels=leg_labels,
                   handles=[data, line],
                   filename=filename,
-                  redo=self.redo)
+                  redo=self.redo,
+                  vline=limit_chi)
 
         self.html.write("""</td>
                         </tr>
@@ -1134,7 +1153,7 @@ class report(object):
     def plot(self, x, y=None, c=None, yerr=None, figure=None, arrows=None, line_funcs=None,
              title='', labels=None, text=None, reverse_x=False, xlabel='', ylabel='',
              clabel='', leg_labels='', handles=[], loc='bl', ellipses=None, axis_perc=10,
-             filename='screen', redo=False):
+             filename='screen', redo=False, vline=None):
 
         """Create and write a scatter plot of the data from an input x axis, and optionally,
         a y and colour axis. This function assumes shared_indices() has already been called
@@ -1193,6 +1212,8 @@ class report(object):
             write an image file.
         redo: bool
             Produce this plot and write it, even if the file already exists.
+        vline: float
+            Draw a vertical line at this x-value if value is not None.
 
         See Also
         --------
@@ -1327,6 +1348,9 @@ class report(object):
                 if ellipses is not None:
                     for e in ellipses:
                         ax.add_patch(e)
+
+                if vline:
+                    ax.plot([np.log10(vline), np.log10(vline)], [ymin, ymax], color='0.8', ls='--')
 
                 if self.verbose:
                     print("Writing figure to '{0}'.".format(filename))
