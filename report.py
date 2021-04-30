@@ -893,7 +893,7 @@ class report(object):
         # Only calculate reduced chi squared to the specified flux limit
         if limit_chi is not None:
             idx = np.where(df['logS'] > np.log10(limit_chi))[0]
-            df_idx = df.loc[idx]
+            df_idx = df.iloc[idx]
             red_chi_sq = calc_red_chi_sq(df_idx['logCounts'], df_idx['logS'], df_idx['logErrDown'])
         else:
             red_chi_sq = calc_red_chi_sq(df['logCounts'], df['logS'], df['logErrDown'])
