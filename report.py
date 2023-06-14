@@ -689,14 +689,14 @@ class report(object):
         # Get non-nan data shared between each used axis as a numpy array
         x, y, c, indices = self.shared_indices(xaxis, yaxis=ratio)
         plt.loglog()
-        plt.gca().grid(b=True, which='minor', color='w', linewidth=0.5)
+        plt.gca().grid(visible=True, which='minor', color='w', linewidth=0.5)
 
         # Hack to overlay resolved sources in red
         xres, yres = xaxis[self.cat.resolved], ratio[self.cat.resolved]
         markers = self.markers.copy()
         markers['color'] = 'r'
         markers.pop('s')
-        data, = plt.plot(xres, yres, 'o', zorder=50, **markers)
+        data, = plt.plot(xres, yres, zorder=50, **markers)
         leg_labels = ['Resolved', 'Unresolved']
 
         # Derive the statistics of y and store in string
@@ -1244,8 +1244,8 @@ class report(object):
                 elif c is None:
                     markers = self.markers.copy()
                     markers.pop('s')
-                    ax.plot(x, y, 'o', zorder=20, alpha=0.0, **markers)
-                    data, = ax.plot(x, y, 'o', **markers)
+                    ax.plot(x, y, zorder=20, alpha=0.0, **markers)
+                    data, = ax.plot(x, y, **markers)
                     handles.append(data)
                 # Plot scatter of data points with colour axis
                 else:
@@ -1590,7 +1590,7 @@ class report(object):
             # Get non-nan data shared between each used axis as a numpy array
             x, y, c, indices = self.shared_indices('SNR', yaxis=ratio)
             plt.loglog()
-            plt.gca().grid(b=True, which='minor', color='w', linewidth=0.5)
+            plt.gca().grid(visible=True, which='minor', color='w', linewidth=0.5)
 
             # Derive the ratio statistics and store in string to append to plot
             ratio_med, ratio_mean, ratio_std, ratio_err, ratio_mad = get_stats(y)

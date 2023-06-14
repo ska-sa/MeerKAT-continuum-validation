@@ -262,7 +262,7 @@ def plot_spectra(freqs, fluxes, errs, models, names, params, param_errs, rcs,
     ax.yaxis.set_minor_formatter(ticker.NullFormatter())
     ax.xaxis.set_major_formatter(ticker.FuncFormatter(ticks_format_freq))
     ax.yaxis.set_major_formatter(ticker.FuncFormatter(ticks_format_flux))
-    ax.grid(b=True, which='minor', color='w', linewidth=0.5)
+    ax.grid(visible=True, which='minor', color='w', linewidth=0.5)
 
     # Plot flux measurements
     plt.errorbar(freqs, fluxes, yerr=errs, linestyle='none', marker='.', c='r', zorder=15)
