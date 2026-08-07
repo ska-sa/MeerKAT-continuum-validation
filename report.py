@@ -696,7 +696,7 @@ class report(object):
         markers = self.markers.copy()
         markers['color'] = 'r'
         markers.pop('s')
-        data, = plt.plot(xres, yres, zorder=50, **markers)
+        data, = plt.plot(np.asarray(xres), np.asarray(yres), zorder=50, **markers)
         leg_labels = ['Resolved', 'Unresolved']
 
         # Derive the statistics of y and store in string
@@ -903,7 +903,7 @@ class report(object):
 
         # Plot Norris+11 data
         data = plt.errorbar(x, y, yerr=yerr, linestyle='none', marker='.', c='r')
-        line, = plt.plot(xlin, ylin, c='black', linestyle='--', zorder=5)
+        line, = plt.plot(np.asarray(xlin), np.asarray(ylin), c='black', linestyle='--', zorder=5)
         txt = ''
         if self.plot_to == 'html':
             txt += 'Data from <a href="http://adsabs.harvard.edu/abs/2011PASA...28..215N">'\
@@ -1244,8 +1244,8 @@ class report(object):
                 elif c is None:
                     markers = self.markers.copy()
                     markers.pop('s')
-                    ax.plot(x, y, zorder=20, alpha=0.0, **markers)
-                    data, = ax.plot(x, y, **markers)
+                    ax.plot(np.asarray(x), np.asarray(y), zorder=20, alpha=0.0, **markers)
+                    data, = ax.plot(np.asarray(x), np.asarray(y), **markers)
                     handles.append(data)
                 # Plot scatter of data points with colour axis
                 else:
@@ -1284,7 +1284,7 @@ class report(object):
 
                     for func in line_funcs:
                         xline, yline = func(xlin, ylin)
-                        plt.plot(xline, yline, lw=2, color='black', linestyle='-', zorder=12)
+                        plt.plot(np.asarray(xline), np.asarray(yline), lw=2, color='black', linestyle='-', zorder=12)
 
                 # Doing this here forces the lines in html plots to not increase the axis limits
                 if reverse_x:
