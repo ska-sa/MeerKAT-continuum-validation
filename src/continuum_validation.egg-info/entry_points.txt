@@ -1,2 +1,0 @@
-[console_scripts]
-continuum-validate = continuum_validation.Radio_continuum_validation:cli_entry
