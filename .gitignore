@@ -1,1 +1,6 @@
 *pyc
+# macOS
+.DS_Store
+
+*_aegean_*.fits
+*.egg-info/
