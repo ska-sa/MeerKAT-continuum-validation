@@ -3,5 +3,4 @@
 .DS_Store
 
 *_aegean_*.fits
-
-catalogues/RACS_DR1.fits
+*.egg-info/
