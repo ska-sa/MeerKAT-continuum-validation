@@ -232,9 +232,11 @@ def filter_sources(suffix, args, cat, image):
     cat.filter_sources(SNR=args['snr'], redo=args['redo'], write=args['write_any'],
                        verbose=args['verbose'], file_suffix='_snr{0}'.format(args['snr']))
     cat.set_specs(image)
+    snr_thresh = args['snr'] if (args.get('snr') is not None and args['snr'] > 0) else 10.0
     myReport = report(cat, args['main_dir'], img=image, verbose=args['verbose'],
                       plot_to=args['source'], redo=args['redo'], src_cnt_bins=args['nbins'],
-                      write=args['write_any'], limit_chi=args['limit_chi'])
+                      write=args['write_any'], limit_chi=args['limit_chi'],
+                      snr_thresh=snr_thresh, flux_ratio_tolerance=1.4)
 
     # Use config file for filtering sources if it exists
     if args['filter_config'] is not None:
@@ -249,6 +251,8 @@ def filter_sources(suffix, args, cat, image):
         cat.filter_sources(flux_lim=1e-3, ratio_frac=1.4, reject_blends=True, flags=True,
                            psf_tol=1.5, resid_tol=3, redo=args['redo'], write=args['write_all'],
                            verbose=args['verbose'])
+    cat.filter_point_sources(snr_thresh=snr_thresh, flux_ratio_tolerance=1.4, redo=args['redo'],
+                             write=args['write_all'], verbose=args['verbose'])
     return myReport
 
 

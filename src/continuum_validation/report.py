@@ -38,7 +38,8 @@ class report(object):
                                                         'marker': 'o', 'color': 'b'},
                  colour_markers={'marker': 'o', 's': 30, 'linewidth': 0}, cmap='plasma',
                  cbins=20, arrows={'color': 'r', 'width': 0.04, 'scale': 20},
-                 src_cnt_bins=50, redo=False, write=True, verbose=True, limit_chi=None):
+                 src_cnt_bins=50, redo=False, write=True, verbose=True, limit_chi=None,
+                 snr_thresh=10.0, flux_ratio_tolerance=1.2):
 
         """Initialise a report object for writing a html report of the image and cross-matches,
         including plots.
@@ -102,6 +103,8 @@ class report(object):
         self.write = write
         self.verbose = verbose
         self.limit_chi = limit_chi
+        self.snr_thresh = snr_thresh
+        self.flux_ratio_tolerance = flux_ratio_tolerance
 
         # set name of directory for figures and create if doesn't exist
         self.figDir = 'figures'
@@ -1119,7 +1122,7 @@ class report(object):
 
         return axis
 
-    def shared_indices(self, xaxis, yaxis=None, caxis=None):
+    def shared_indices(self, xaxis, yaxis=None, caxis=None, mask=None):
 
         """Return a list of non-nan indices shared between all used axes.
 
@@ -1134,6 +1137,8 @@ class report(object):
         caxis : string or numpy.array or pandas.Series or list
             A list of the colour axis data. String are interpreted as column names from catalogue
             object passed into constructor. If this is None, caxis will be ignored.
+        mask : numpy.ndarray or pandas.Series, optional
+            Boolean mask to filter sources (e.g. point sources mask).
 
         Returns:
         --------
@@ -1158,14 +1163,22 @@ class report(object):
         c = self.axis_to_np(caxis)
 
         # Get all shared indices from used axes that aren't nan
+        valid = ~np.isnan(x)
+        if yaxis is not None:
+            valid &= ~np.isnan(y)
+        if caxis is not None:
+            valid &= ~np.isnan(c)
+        if mask is not None:
+            mask_arr = np.asarray(mask, dtype=bool)
+            if len(mask_arr) == len(valid):
+                valid &= mask_arr
+
+        indices = np.where(valid)[0]
         if yaxis is None:
-            indices = np.where(~np.isnan(x))[0]
             return x[indices], None, None, indices
         elif caxis is None:
-            indices = np.where((~np.isnan(x)) & (~np.isnan(y)))[0]
             return x[indices], y[indices], None, indices
         else:
-            indices = np.where((~np.isnan(x)) & (~np.isnan(y)) & (~np.isnan(c)))[0]
             return x[indices], y[indices], c[indices], indices
 
  
@@ -1585,11 +1598,32 @@ class report(object):
 
         filename = 'screen'
 
+        # Identify point sources for both catalogues
+        active_mask = None
+        n_point = 0
+        if hasattr(self.cat, 'get_point_source_mask'):
+            mask1 = self.cat.get_point_source_mask(cat_name=name1, snr_thresh=self.snr_thresh,
+                                                   flux_ratio_tolerance=self.flux_ratio_tolerance)
+            mask2 = self.cat.get_point_source_mask(cat_name=name2, snr_thresh=self.snr_thresh,
+                                                   flux_ratio_tolerance=self.flux_ratio_tolerance)
+            point_mask = mask1 & mask2
+            n_point = int(np.sum(point_mask))
+            if n_point > 0:
+                print("Validating with {0} point sources (out of {1} cross-matches).".format(
+                    n_point, self.cat.count[name2]))
+                active_mask = point_mask
+            else:
+                warnings.warn("No point sources matched criteria (S_Code='S', SNR>={0}, ratio<={1}) "
+                              "between {2} and {3}. Using all matched sources.".format(
+                                  self.snr_thresh, self.flux_ratio_tolerance, name1, name2),
+                              UserWarning)
+
         # Write survey and number of matched to cross-matches report table
+        pt_info = " ({0} point sources)".format(n_point) if n_point > 0 else ""
         self.html.write("""<tr>
                         <td>{0}</td>
                         <td>{1}</td>
-                        <td>{2}""".format(name2, self.cat.freq[name2], self.cat.count[name2]))
+                        <td>{2}{3}""".format(name2, self.cat.freq[name2], self.cat.count[name2], pt_info))
 
         # Plot the positional offsets
         title = "{0} \u2014 {1} positional offsets".format(name1, name2)
@@ -1606,7 +1640,8 @@ class report(object):
 
         # Get non-nan data shared between each used axis as a numpy array
         x, y, c, indices = self.shared_indices(self.cat.dRA[name2],
-                                               yaxis=self.cat.dDEC[name2], caxis=caxis)
+                                               yaxis=self.cat.dDEC[name2], caxis=caxis,
+                                               mask=active_mask)
 
         # Derive the statistics of x and y and store in string to annotate on figure
         dRAmed, dRAmean, dRAstd, dRAerr, dRAmad = get_stats(x)
@@ -1707,7 +1742,7 @@ class report(object):
 
         # Get non-nan data shared between each used axis as a numpy array
         x, y, c, indices = self.shared_indices(self.cat.ra[name2], yaxis=self.cat.dec[name2],
-                                               caxis=caxis)
+                                               caxis=caxis, mask=active_mask)
 
         # For html plots, add S/N and separation labels for every data point
         if caxis is not None:
@@ -1772,7 +1807,7 @@ class report(object):
                 filename = '{0}/{1}_{2}_ratio.{3}'.format(self.figDir, name1, name2, self.plot_to)
 
             # Get non-nan data shared between each used axis as a numpy array
-            x, y, c, indices = self.shared_indices('SNR', yaxis=ratio)
+            x, y, c, indices = self.shared_indices('SNR', yaxis=ratio, mask=active_mask)
 
             # Derive the ratio statistics and store in string to append to plot
             ratio_med, ratio_mean, ratio_std, ratio_err, ratio_mad = get_stats(y)
@@ -1833,7 +1868,8 @@ class report(object):
 
             # Get non-nan data shared between each used axis as a numpy array
             x, y, c, indices = self.shared_indices(self.cat.ra[name2],
-                                                   yaxis=self.cat.dec[name2], caxis=logRatio)
+                                                   yaxis=self.cat.dec[name2], caxis=logRatio,
+                                                   mask=active_mask)
 
             # Format labels according to destination of figure
             if self.plot_to == 'html':
@@ -1875,7 +1911,7 @@ class report(object):
                                                                   name2, self.plot_to)
 
             # Get non-nan data shared between each used axis as a numpy array
-            x, y, c, indices = self.shared_indices(si_column)
+            x, y, c, indices = self.shared_indices(si_column, mask=active_mask)
 
             # Format labels according to destination of figure
             freq1 = int(round(min(self.cat.freq[name1], self.cat.freq[name2])))
@@ -1937,7 +1973,7 @@ class report(object):
                          'Positional Offset Uncertainty': name2,
                          'Spectral Index': alpha_type}
 
-        count = self.cat.count[name2]
+        count = n_point if (active_mask is not None and n_point > 0) else self.cat.count[name2]
 
         # Overwrite values if they are valid and come from a larger catalogue
         for key in list(metric_val.keys()):

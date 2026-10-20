@@ -4,3 +4,6 @@
 
 *_aegean_*.fits
 *.egg-info/
+
+# catalogues are stored as a mirror
+catalogues/

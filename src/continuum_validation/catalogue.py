@@ -30,7 +30,7 @@ class catalogue(object):
                  flux_col='int_flux', flux_err_col='err_int_flux', peak_col='peak_flux',
                  peak_err_col='err_peak_flux', rms_val='local_rms', flux_unit='Jy',
                  use_peak=False, island_col='island', flag_col='flags', maj_col='a',
-                 SNR=5.0, col_suffix='', sep='\t', basename=None, autoload=True,
+                 s_code_col=None, SNR=5.0, col_suffix='', sep='\t', basename=None, autoload=True,
                  verbose=False):
 
         """Initialise a catalogue object.
@@ -214,6 +214,7 @@ class catalogue(object):
             self.dec_fmt = 'deg'
             self.flux_unit = 'jy'
             self.si_col = None
+            self.s_code_col = self.unique_col_name('S_Code') if 'S_Code' in self.df.columns else None
 
         else:
             if self.finder is not None and self.finder == 'aegean':
@@ -228,6 +229,7 @@ class catalogue(object):
             self.island_col = self.unique_col_name(island_col)
             self.flag_col = self.unique_col_name(flag_col)
             self.maj_col = self.unique_col_name(maj_col)
+            self.s_code_col = self.unique_col_name(s_code_col) if s_code_col is not None else None
             if type(rms_val) is str:
                 self.rms_val = self.unique_col_name(rms_val)
             else:
@@ -251,6 +253,14 @@ class catalogue(object):
             warnings.warn_explicit("Unrecognised flux unit '{0}'. Use 'Jy', 'mJy' or\
             'uJy'. Assuming 'Jy'\n".format(flux_unit), UserWarning, WARN, cf.f_lineno)
             self.flux_unit = 'jy'
+
+        # Store catalogue/config column names
+        self.s_code_col_dict = {self.name: self.s_code_col}
+        self.peak_col_dict = {self.name: self.peak_col}
+        self.flux_col_dict = {self.name: self.flux_col}
+        self.flag_col_dict = {self.name: self.flag_col}
+        self.island_col_dict = {self.name: self.island_col}
+        self.rms_col_dict = {self.name: self.rms_val}
 
         # Keep a running list of key values for all sources, as a dictionary with key 'name'
         self.cat_list = [self.name]
@@ -334,6 +344,11 @@ class catalogue(object):
             df = pd.read_parquet(filepath)
         else:
             df = pd.read_table(filepath, sep=sep)
+
+        # Convert byte columns to utf-8 strings
+        for col in df.columns:
+            if df[col].dtype == object and len(df) > 0 and isinstance(df[col].iloc[0], bytes):
+                df[col] = df[col].apply(lambda x: x.decode('utf-8', errors='ignore') if isinstance(x, bytes) else x)
 
         if verbose:
             print("Catalogue contains {0} sources.".format(len(df)))
@@ -489,6 +504,19 @@ class catalogue(object):
 
             if cat.si_col is not None:
                 self.si[cat.name] = cat.si[cat.name]
+
+            if hasattr(cat, 's_code_col'):
+                self.s_code_col_dict[cat.name] = cat.s_code_col
+            if hasattr(cat, 'peak_col'):
+                self.peak_col_dict[cat.name] = cat.peak_col
+            if hasattr(cat, 'flux_col'):
+                self.flux_col_dict[cat.name] = cat.flux_col
+            if hasattr(cat, 'flag_col'):
+                self.flag_col_dict[cat.name] = cat.flag_col
+            if hasattr(cat, 'island_col'):
+                self.island_col_dict[cat.name] = cat.island_col
+            if hasattr(cat, 'rms_val'):
+                self.rms_col_dict[cat.name] = cat.rms_val
 
         # Otherwise initialise or update dictionary for this instance
         else:
@@ -891,6 +919,129 @@ class catalogue(object):
         # If file exists, simply read in catalogue
         else:
             self.overwrite_df(filename, step='filtering', verbose=verbose)
+
+    def get_point_source_mask(self, cat_name=None, snr_thresh=5.0, flux_ratio_tolerance=1.2,
+                              check_flags=False):
+        """Return a boolean mask for point sources based on S_Code ('S'), S/N, and flux ratio.
+        All column names are taken directly from the catalogue and config file definitions.
+
+        Parameters
+        ----------
+        cat_name : str, optional
+            The catalogue name to evaluate (default is self.name). If evaluating a cross-matched
+            catalogue in self.df, specify its cat_name.
+        snr_thresh : float
+            Minimum signal-to-noise ratio (Peak_flux / Noise).
+        flux_ratio_tolerance : float
+            Maximum Total_flux / Peak_flux ratio for a compact point source.
+        check_flags : bool, optional
+            Whether to enforce good quality flags (default is False, focusing on point source criteria).
+
+        Returns
+        -------
+        point_mask : pandas.Series of bool
+            Boolean Series indicating point sources.
+        """
+        target_name = self.name if (cat_name is None or cat_name == self.name) else cat_name
+        df = self.df
+
+        # Use column names defined in the config file for this catalogue
+        s_code_col = self.s_code_col_dict.get(target_name, self.s_code_col)
+        peak_col = self.peak_col_dict.get(target_name, self.peak_col)
+        flux_col = self.flux_col_dict.get(target_name, self.flux_col)
+        flag_col = self.flag_col_dict.get(target_name, self.flag_col)
+        rms_val = self.rms_col_dict.get(target_name, self.rms_val)
+        island_col = self.island_col_dict.get(target_name, self.island_col)
+
+        # 1. Single source check (from s_code_col, or island_col for single-component Aegean islands)
+        if s_code_col is not None and s_code_col in df.columns:
+            s_vals = df[s_code_col].apply(lambda x: x.decode('utf-8', errors='ignore') if isinstance(x, bytes) else str(x))
+            single_mask = s_vals.str.strip().str.upper() == 'S'
+        elif island_col is not None and island_col in df.columns:
+            counts = df[island_col].value_counts()
+            single_islands = counts[counts == 1].index
+            single_mask = df[island_col].isin(single_islands)
+        else:
+            single_mask = pd.Series(True, index=df.index)
+
+        # 2. Flag check (only if check_flags=True)
+        if check_flags and flag_col is not None and flag_col in df.columns:
+            f_vals = df[flag_col].apply(lambda x: x.decode('utf-8', errors='ignore') if isinstance(x, bytes) else x)
+            f_num = pd.to_numeric(f_vals, errors='coerce')
+            clean_flag = f_vals.isin(['0', '-', '', 'None', 'nan', None]) | (f_num == 0)
+            single_mask = single_mask & clean_flag
+
+        # 3. Peak flux (from peak_col in config)
+        if peak_col is not None and peak_col in df.columns:
+            peak = pd.to_numeric(df[peak_col], errors='coerce')
+        elif target_name in self.flux:
+            peak = pd.to_numeric(self.flux[target_name], errors='coerce')
+        else:
+            peak = None
+
+        # 4. Total flux (from flux_col in config)
+        if flux_col is not None and flux_col in df.columns:
+            flux = pd.to_numeric(df[flux_col], errors='coerce')
+        elif target_name in self.flux:
+            flux = pd.to_numeric(self.flux[target_name], errors='coerce')
+        elif peak is not None:
+            flux = peak
+        else:
+            flux = None
+
+        # 5. Noise / RMS (from rms_val in config)
+        if isinstance(rms_val, str) and rms_val in df.columns:
+            noise = pd.to_numeric(df[rms_val], errors='coerce')
+        elif target_name in self.rms and not isinstance(self.rms[target_name], (int, float)):
+            noise = pd.to_numeric(self.rms[target_name], errors='coerce')
+        elif isinstance(rms_val, (int, float)):
+            noise = float(rms_val)
+        else:
+            noise = None
+
+        # 6. S/N and Flux ratio masks
+        with np.errstate(divide='ignore', invalid='ignore'):
+            if peak is not None and noise is not None:
+                noise_arr = np.asarray(noise, dtype=float)
+                peak_arr = np.asarray(peak, dtype=float)
+                snr = np.where((noise_arr > 0) & np.isfinite(noise_arr) & np.isfinite(peak_arr),
+                               peak_arr / noise_arr, 0.0)
+                snr_mask = snr >= snr_thresh
+            else:
+                snr_mask = pd.Series(True, index=df.index)
+
+            if flux is not None and peak is not None:
+                peak_arr = np.asarray(peak, dtype=float)
+                flux_arr = np.asarray(flux, dtype=float)
+                ratio = np.where((peak_arr > 0) & np.isfinite(peak_arr) & np.isfinite(flux_arr),
+                                 flux_arr / peak_arr, np.nan)
+                ratio_mask = (ratio > 0) & (ratio <= flux_ratio_tolerance)
+            else:
+                ratio_mask = pd.Series(True, index=df.index)
+
+        point_mask = single_mask & snr_mask & ratio_mask
+        return pd.Series(point_mask, index=df.index, dtype=bool)
+
+    def filter_point_sources(self, snr_thresh=5.0, flux_ratio_tolerance=1.2, redo=False,
+                             write=True, verbose=True):
+        """Filter self.df to only retain point sources based on S_Code, SNR, and flux ratio."""
+        mask = self.get_point_source_mask(cat_name=self.name, snr_thresh=snr_thresh,
+                                          flux_ratio_tolerance=flux_ratio_tolerance)
+        n_point = int(np.sum(mask))
+        if verbose:
+            print("Filtering {0} catalogue to point sources (S_Code='S', SNR >= {1}, ratio <= {2})...".format(
+                self.name, snr_thresh, flux_ratio_tolerance))
+            print("Point sources identified: {0} / {1}.".format(n_point, len(self.df)))
+
+        if n_point > 0:
+            self.df = self.df[mask].reset_index(drop=True)
+            self.set_key_fields(set_coords=True)
+            if write:
+                point_file = "{0}_pointsrc.csv".format(self.basename)
+                self.write_df(write, point_file, verbose=verbose)
+        else:
+            if verbose:
+                print("Warning: No point sources found in {0}. Keeping all sources.".format(self.name))
 
     def cross_match(self, cat, radius='largest', join_type='1', redo=False, write=True):
 
@@ -1375,6 +1526,7 @@ class catalogue(object):
         # spectral indices
         cat.cutout_box(self.ra_bounds, self.dec_bounds, redo=redo, verbose=verbose,
                        write=write_any)
+        cat.filter_point_sources(redo=redo, write=write_any, verbose=verbose)
         self.cross_match(cat, redo=redo, write=write_all)
         if cat.name in self.cat_list and self.name in self.flux:
             self.fit_spectra(cat_name=cat.name, redo=redo, write=write_all)

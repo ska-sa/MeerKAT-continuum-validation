@@ -1,4 +1,4 @@
-filename=VLASS.parquet
+filename=VLASS2QLv2_components.parquet
 name=VLASS
 frequency=3000.0
 finder=None
@@ -14,7 +14,8 @@ peak_err_col=E_Peak_flux
 use_peak=False
 rms_val=Isl_rms
 flux_unit=mJy
-island_col=Component_id
-flag_col=Quality_flag
+island_col=None
+flag_col=None
 maj_col=Maj
+s_code_col=S_Code
 autoload=True
