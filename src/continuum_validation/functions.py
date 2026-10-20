@@ -796,6 +796,122 @@ def new_path(filepath):
     return filepath
 
 
+CATALOGUES_MIRROR_URL = 'http://sdp-services.kat.ac.za/mirror/catalogues/'
+
+
+def get_catalogues_dir(main_dir=None, create=False, verbose=True):
+    """Determine the catalogues directory.
+    Checks candidate locations:
+    1. main_dir/catalogues
+    2. package repo root / catalogues
+    3. current working directory / catalogues
+
+    If create is True and no catalogues directory exists, creates one.
+
+    Returns:
+    --------
+    cat_dir : string
+        The path to the catalogues directory.
+    """
+    pkg_cat_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'catalogues'))
+    candidate_cat_dirs = []
+    if main_dir:
+        candidate_cat_dirs.append(os.path.join(main_dir, 'catalogues'))
+    candidate_cat_dirs.extend([pkg_cat_dir, os.path.abspath('catalogues')])
+
+    for cdir in candidate_cat_dirs:
+        if os.path.isdir(cdir):
+            return cdir
+
+    # If it doesn't exist, pick the most appropriate path to create
+    if main_dir and os.path.isdir(main_dir):
+        target_cat_dir = os.path.join(main_dir, 'catalogues')
+    elif os.path.isdir(os.path.dirname(pkg_cat_dir)):
+        target_cat_dir = pkg_cat_dir
+    else:
+        target_cat_dir = os.path.abspath('catalogues')
+
+    if create:
+        if not os.path.exists(target_cat_dir):
+            if verbose:
+                print("Catalogues directory '{0}' does not exist. Creating it.".format(target_cat_dir))
+            os.makedirs(target_cat_dir, exist_ok=True)
+
+    return target_cat_dir
+
+
+def download_catalogue(filename, target_dir=None, mirror_url=CATALOGUES_MIRROR_URL, verbose=True):
+    """Download a catalogue file from mirror_url using wget.
+    First checks if target catalogues directory exists; if not, creates it.
+
+    Arguments:
+    ----------
+    filename : string
+        Filename of the catalogue (e.g. 'RACS_mid.parquet').
+    target_dir : string, optional
+        Directory path where the catalogue should be saved.
+    mirror_url : string
+        Base URL for the catalogue mirror.
+    verbose : bool
+        Verbose output.
+
+    Returns:
+    --------
+    target_file : string or None
+        Path to the downloaded file if successful, None otherwise.
+    """
+    if target_dir is None:
+        target_dir = get_catalogues_dir(create=True, verbose=verbose)
+    elif not os.path.exists(target_dir):
+        if verbose:
+            print("Catalogues directory '{0}' does not exist. Creating it.".format(target_dir))
+        os.makedirs(target_dir, exist_ok=True)
+
+    url = mirror_url.rstrip('/') + '/' + filename
+    target_file = os.path.join(target_dir, filename)
+
+    if verbose:
+        print("Downloading catalogue '{0}' from {1} using wget...".format(filename, url))
+
+    # Use wget as requested
+    try:
+        import subprocess
+        result = subprocess.run(["wget", "-c", url, "-O", target_file], check=False)
+        if result.returncode == 0 and os.path.exists(target_file) and os.path.getsize(target_file) > 0:
+            if verbose:
+                print("Successfully downloaded '{0}' to '{1}'.".format(filename, target_file))
+            return target_file
+        else:
+            if os.path.exists(target_file) and os.path.getsize(target_file) == 0:
+                os.remove(target_file)
+            return None
+    except FileNotFoundError:
+        # Fallback to urllib if wget binary is not installed
+        import urllib.request
+        try:
+            if verbose:
+                print("wget not found on system PATH. Attempting download with urllib...")
+            urllib.request.urlretrieve(url, target_file)
+            if os.path.exists(target_file) and os.path.getsize(target_file) > 0:
+                return target_file
+            else:
+                if os.path.exists(target_file):
+                    os.remove(target_file)
+                return None
+        except Exception as e:
+            if os.path.exists(target_file):
+                os.remove(target_file)
+            if verbose:
+                print("Failed to download '{0}': {1}".format(filename, e))
+            return None
+    except Exception as e:
+        if os.path.exists(target_file):
+            os.remove(target_file)
+        if verbose:
+            print("Error downloading '{0}': {1}".format(filename, e))
+        return None
+
+
 def find_file(filepath, main_dir, verbose=True):
 
     """Look for a file in specific paths:
@@ -804,6 +920,7 @@ def find_file(filepath, main_dir, verbose=True):
     3. Main directory / catalogues subfolder
     4. Main directory directly
     5. Parent directory (new_path)
+    6. Download from catalogue mirror using wget if not found
 
     Arguments:
     ----------
@@ -839,12 +956,16 @@ def find_file(filepath, main_dir, verbose=True):
 
     # Check catalogues directory across multiple candidate locations
     pkg_cat_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'catalogues'))
-    candidate_cat_dirs = [
-        os.path.join(main_dir, 'catalogues'),
-        main_dir,
+    candidate_cat_dirs = []
+    if main_dir:
+        candidate_cat_dirs.extend([
+            os.path.join(main_dir, 'catalogues'),
+            main_dir,
+        ])
+    candidate_cat_dirs.extend([
         pkg_cat_dir,
         'catalogues',
-    ]
+    ])
     for cdir in candidate_cat_dirs:
         cat_file = os.path.join(cdir, filepath)
         if os.path.exists(cat_file):
@@ -857,6 +978,14 @@ def find_file(filepath, main_dir, verbose=True):
     if os.path.exists(up_path):
         return up_path
 
+    # If still not found, check if catalogues directory exists, create if not, and download using wget
+    target_cat_dir = get_catalogues_dir(main_dir=main_dir, create=True, verbose=verbose)
+    fname = os.path.basename(filepath)
+    downloaded = download_catalogue(fname, target_dir=target_cat_dir, verbose=verbose)
+    if downloaded is not None and os.path.exists(downloaded):
+        return downloaded
+
     # Raise exception if file still not found
     raise Exception("Can't find file - {0}. Ensure this file is in input "
                     "path, package resources, or --main-dir.\n".format(filepath))
+
