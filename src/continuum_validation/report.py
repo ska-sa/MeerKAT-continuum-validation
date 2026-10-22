@@ -231,11 +231,7 @@ class report(object):
         img : radio_image
             A radio image object used to write values to the html table."""
 
-        # generate link to confluence page for each project code
         project = img.project
-        if project.startswith('AS'):
-            project = self.add_html_link("https://confluence.csiro.au/display/askapsst/{0}+"
-                                         "Data".format(img.project), img.project, file=False)
 
         # Write observations report table
         self.html.write("""
@@ -370,8 +366,8 @@ class report(object):
 
     def assign_metric_levels(self):
 
-        """Assign level 1 (good), 2 (uncertain) or 3 (bad) to each metric, depending on specific tolerenace
-        values. See https://confluence.csiro.au/display/askapsst/Continuum+validation+metrics"""
+        """Assign level 1 (good), 2 (uncertain) or 3 (bad) to each metric, depending on specific tolerance
+        values."""
 
         for metric in list(self.metric_val.keys()):
             # Remove keys that don't have a valid value (value=-99 or -1111)
@@ -385,14 +381,14 @@ class report(object):
                     val = np.abs(self.metric_val[metric]-1)
                     good_condition = val < 0.05
                     uncertain_condition = val < 0.1
-                    self.metric_source[metric] = 'Median flux density ratio [ASKAP / {0}]'.format(
-                        self.metric_source[metric])
+                    self.metric_source[metric] = 'Median flux density ratio [{0} / {1}]'.format(
+                        self.cat.name, self.metric_source[metric])
                 # Uncertainty on flux ratio less than 10/20%?
                 elif metric == 'Flux Ratio Uncertainty':
                     good_condition = self.metric_val[metric] < 0.1
                     uncertain_condition = self.metric_val[metric] < 0.2
                     self.metric_source[metric] = 'R.M.S. of median flux density ratio '
-                    '[ASKAP / {0}]'.format(self.metric_source[metric])
+                    '[{0} / {1}]'.format(self.cat.name, self.metric_source[metric])
                     self.metric_source[metric] += ' (estimated from median absolute deviation '
                     'from median)'
                 # Positional offset < 1/5 arcsec
@@ -400,13 +396,13 @@ class report(object):
                     good_condition = self.metric_val[metric] < 1
                     uncertain_condition = self.metric_val[metric] < 5
                     self.metric_source[metric] = 'Median positional offset (arcsec) '
-                    '[ASKAP-{0}]'.format(self.metric_source[metric])
+                    '[{0}-{1}]'.format(self.cat.name, self.metric_source[metric])
                 # Uncertainty on positional offset < 1/5 arcsec
                 elif metric == 'Positional Offset Uncertainty':
                     good_condition = self.metric_val[metric] < 5
                     uncertain_condition = self.metric_val[metric] < 10
                     self.metric_source[metric] = 'R.M.S. of median positional offset (arcsec) '
-                    '[ASKAP-{0}]'.format(self.metric_source[metric])
+                    '[{0}-{1}]'.format(self.cat.name, self.metric_source[metric])
                     self.metric_source[metric] += ' (estimated from median absolute deviation '
                     'from median)'
                 # Reduced chi-squared of source counts < 3/50?
@@ -442,30 +438,11 @@ class report(object):
                                                                   uncertain_condition)
 
         if self.img is not None:
-            self.write_CASDA_xml()
+            self.write_validation_xml()
 
-    def write_pipeline_offset_params(self):
+    def write_validation_xml(self):
 
-        """Write a txt file with offset params for ASKAPsoft pipeline for user to easily
-        import into config file, and then drop them from metrics.
-        See http://www.atnf.csiro.au/computing/software/askapsoft/sdp/docs/current/pipelines
-        /ScienceFieldContinuumImaging.html?highlight=offset"""
-
-        txt = open('offset_pipeline_params.txt', 'w')
-        txt.write("DO_POSITION_OFFSET=true\n")
-        txt.write("RA_POSITION_OFFSET={0:.2f}\n".format(-self.metric_val['RA Offset']))
-        txt.write("DEC_POSITION_OFFSET={0:.2f}\n".format(-self.metric_val['DEC Offset']))
-        txt.close()
-
-        for metric in ['RA Offset', 'DEC Offset']:
-            self.metric_val.pop(metric)
-            self.metric_source.pop(metric)
-            self.metric_level.pop(metric)
-            self.metric_count.pop(metric)
-
-    def write_CASDA_xml(self):
-
-        """Write xml table with all metrics for CASDA."""
+        """Write xml table with all metrics."""
 
         tmp_table = Table([list(self.metric_val.keys()), list(self.metric_val.values()),
                            list(self.metric_level.values()), list(self.metric_source.values())],
@@ -482,7 +459,7 @@ class report(object):
         prefix = ''
         if self.img.project != '':
             prefix = '{0}_'.format(self.img.project)
-        xml_filename = '{0}CASDA_continuum_validation.xml'.format(prefix)
+        xml_filename = '{0}continuum_validation.xml'.format(prefix)
         votable.writeto(vot, xml_filename)
 
     def write_html_end(self):
@@ -546,8 +523,6 @@ class report(object):
                 self.metric_level['Spectral Index']), self.metric_val['Spectral Index']))
 
         by = ''
-        if self.cat.name != 'ASKAP':
-            by = """ by <a href="mailto:Jordan.Collier@csiro.au">Jordan Collier</a>"""
         # Close table, write time generated, and close html file
         self.html.write("""</tr>
             </table>
@@ -936,7 +911,7 @@ class report(object):
         else:
             txt += '\u03C7\u00B2 (reduced): %.2f' % red_chi_sq
 
-        # Legend labels for the Norris data and line, and the ASKAP data
+        # Legend labels for the Norris data and line, and the catalogue data
         xlab = 'Norris+11'
         leg_labels = [xlab, '{0}th degree polynomial fit to {1}'.format(deg, xlab), self.cat.name]
 
@@ -951,7 +926,7 @@ class report(object):
              'name': '{0}th degree polynomial fit to {1}'.format(deg, xlab)},
             ]
 
-        # Plot ASKAP data on top of Norris+11 data
+        # Plot catalogue data on top of Norris+11 data
         self.plot(df['logS'],
                   y=df['logCounts'],
                   yerr=(df['logErrDown'], df['logErrUp']),

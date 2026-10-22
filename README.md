@@ -10,7 +10,6 @@ Create and activate a Python environment, then install the package:
 python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt
 pip install -e .
 ```
 
@@ -32,7 +31,6 @@ You can also run the legacy wrapper scripts directly:
 
 ```bash
 python Radio_continuum_validation.py --fits path/to/image.fits --snr 5
-python ASKAP_continuum_validation.py path/to/image.fits
 ```
 
 ## Common options

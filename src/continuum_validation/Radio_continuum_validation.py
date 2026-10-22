@@ -50,10 +50,9 @@ Options:
   ('pow','SSA','FFA','curve',etc) [default: None].
   -e --SEDfig=<extn>        Write figures for each SED model with this file extension
   (may significantly slow down script) [default: None].
-  -t --telescope=<name>     Unique name of the telescope or survey to give to the main catalogue
-  (not used when -A used). [default: ASKAP].
+  -t --telescope=<name>     Unique name of the telescope or survey to give to the main catalogue [default: MeerKAT].
   -d --main-dir=<path>      The absolute path to the main directory where this script and other
-  required files are located [default: $ACES/UserScripts/col52r].
+  required files are located [default: None].
   -n --ncores=<num>         The number of cores (per node) to use when running BANE and Aegean
   (using >=20 cores may result in memory error) [default: 8].
   -b --nbins=<num>          The number of bins to use when performing source counts [default: 50].
@@ -111,12 +110,9 @@ def process_args(script, argv):
         mpl.use('Agg')
 
     # Find directory that contains all the necessary files
-    main_dir = args['--main-dir']
-    if main_dir.startswith('$ACES') and 'ACES' in list(os.environ.keys()):
-        ACES = os.environ['ACES']
-        main_dir = main_dir.replace('$ACES', ACES)
+    main_dir = parse_string(args['--main-dir'])
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    if not os.path.exists('{0}/requirements.txt'.format(main_dir)):
+    if main_dir is None or not os.path.exists(os.path.join(main_dir, 'requirements.txt')):
         if os.path.exists(os.path.join(repo_root, 'requirements.txt')):
             main_dir = repo_root
         else:
