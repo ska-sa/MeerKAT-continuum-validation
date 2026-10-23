@@ -8,7 +8,10 @@ from astropy.io import fits as f
 from astropy.utils.exceptions import AstropyWarning
 from astropy.wcs import WCS
 
-from functions import remove_extn, get_pixel_area
+try:
+    from .functions import remove_extn, get_pixel_area
+except ImportError:
+    from functions import remove_extn, get_pixel_area
 import subprocess
 import shlex
 
@@ -152,15 +155,8 @@ class radio_image(object):
         self.date = self.header_key(head, 'DATE-OBS')
         self.duration = self.header_key(head, 'DURATION', floatify=True)
 
-        # Get ASKAP soft version from history in header if it exists
         self.soft_version = ''
         self.pipeline_version = ''
-        if 'HISTORY' in list(head.keys()):
-            for val in head['HISTORY']:
-                if 'ASKAPsoft version' in val:
-                    self.soft_version = val.split('/')[-1].split()[-1].replace(',', '')
-                if 'ASKAP pipeline version' in val:
-                    self.pipeline_version = val.split()[-1].replace(',', '')
 
         # Derive duration in hours
         if self.duration != '':

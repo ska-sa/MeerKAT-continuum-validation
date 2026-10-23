@@ -27,7 +27,7 @@ Options:
   -h --help                 Show this help message.
   -C --catalogues=<list>    A comma-separated list of filepaths to catalogue config files
   corresponding to catalogues to use (will look in --main-dir for each file not found in
-  given path) [default: NVSS_config.txt,SUMSS_config.txt,GLEAM_config.txt,TGSS_config.txt].
+  given path) [default: NVSS_config.txt,SUMSS_config.txt,TGSS_config.txt,VLASS_config.txt, RACS_low_config.txt,RACS_mid_config.txt,EMU_config.txt,VLASS_config.txt,GLEAM_X_config.txt].
   -N --noise=<map>          Use this FITS image of the local rms. Default is to run BANE
   [default: None].
   -F --filter=<config>      A config file for filtering the sources in the input FITS file
@@ -50,10 +50,9 @@ Options:
   ('pow','SSA','FFA','curve',etc) [default: None].
   -e --SEDfig=<extn>        Write figures for each SED model with this file extension
   (may significantly slow down script) [default: None].
-  -t --telescope=<name>     Unique name of the telescope or survey to give to the main catalogue
-  (not used when -A used). [default: ASKAP].
+  -t --telescope=<name>     Unique name of the telescope or survey to give to the main catalogue [default: MeerKAT].
   -d --main-dir=<path>      The absolute path to the main directory where this script and other
-  required files are located [default: $ACES/UserScripts/col52r].
+  required files are located [default: None].
   -n --ncores=<num>         The number of cores (per node) to use when running BANE and Aegean
   (using >=20 cores may result in memory error) [default: 8].
   -b --nbins=<num>          The number of bins to use when performing source counts [default: 50].
@@ -76,10 +75,16 @@ from inspect import currentframe, getframeinfo
 import matplotlib as mpl
 from docopt import docopt
 
-from catalogue import catalogue
-from functions import parse_string, new_path, changeDir, find_file, config2dic
-from radio_image import radio_image
-from report import report
+try:
+    from .catalogue import catalogue
+    from .functions import parse_string, new_path, changeDir, find_file, config2dic, get_catalogues_dir
+    from .radio_image import radio_image
+    from .report import report
+except ImportError:
+    from catalogue import catalogue
+    from functions import parse_string, new_path, changeDir, find_file, config2dic, get_catalogues_dir
+    from radio_image import radio_image
+    from report import report
 
 cf = currentframe()
 WARN = '\n\033[91mWARNING: \033[0m' + getframeinfo(cf).filename
@@ -105,23 +110,23 @@ def process_args(script, argv):
         mpl.use('Agg')
 
     # Find directory that contains all the necessary files
-    main_dir = args['--main-dir']
-    if main_dir.startswith('$ACES') and 'ACES' in list(os.environ.keys()):
-        ACES = os.environ['ACES']
-        main_dir = main_dir.replace('$ACES', ACES)
-    if not os.path.exists('{0}/requirements.txt'.format(main_dir)):
-        split = script.split('/')
-        script_dir = '/'.join(split[:-1])
-        print("Looking in '{0}' for necessary files.".format(script_dir))
-        if 'Radio_continuum_validation' in split[-1]:
-            main_dir = script_dir
+    main_dir = parse_string(args['--main-dir'])
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    if main_dir is None or not os.path.exists(os.path.join(main_dir, 'requirements.txt')):
+        if os.path.exists(os.path.join(repo_root, 'requirements.txt')):
+            main_dir = repo_root
         else:
-            warnings.warn_explicit("""Can't find necessary files in main directory
-            - {0}.\n""".format(main_dir), UserWarning, WARN, cf.f_lineno)
+            split = script.split('/')
+            script_dir = '/'.join(split[:-1])
+            if 'Radio_continuum_validation' in split[-1] or 'continuum-validate' in split[-1]:
+                main_dir = script_dir
+            else:
+                warnings.warn_explicit("""Can't find necessary files in main directory
+                - {0}.\n""".format(main_dir), UserWarning, WARN, cf.f_lineno)
 
     # Set paramaters passed in by user
     parms = {}
-    parms['main_dir'] = main_dir
+    parms['main_dir'] = os.path.abspath(main_dir)
     parms['img'] = parse_string(args['--fits'])
     parms['verbose'] = args['--verbose']
     parms['source'] = args['--source']
@@ -223,9 +228,11 @@ def filter_sources(suffix, args, cat, image):
     cat.filter_sources(SNR=args['snr'], redo=args['redo'], write=args['write_any'],
                        verbose=args['verbose'], file_suffix='_snr{0}'.format(args['snr']))
     cat.set_specs(image)
+    snr_thresh = args['snr'] if (args.get('snr') is not None and args['snr'] > 0) else 10.0
     myReport = report(cat, args['main_dir'], img=image, verbose=args['verbose'],
                       plot_to=args['source'], redo=args['redo'], src_cnt_bins=args['nbins'],
-                      write=args['write_any'], limit_chi=args['limit_chi'])
+                      write=args['write_any'], limit_chi=args['limit_chi'],
+                      snr_thresh=snr_thresh, flux_ratio_tolerance=1.4)
 
     # Use config file for filtering sources if it exists
     if args['filter_config'] is not None:
@@ -240,11 +247,16 @@ def filter_sources(suffix, args, cat, image):
         cat.filter_sources(flux_lim=1e-3, ratio_frac=1.4, reject_blends=True, flags=True,
                            psf_tol=1.5, resid_tol=3, redo=args['redo'], write=args['write_all'],
                            verbose=args['verbose'])
+    cat.filter_point_sources(snr_thresh=snr_thresh, flux_ratio_tolerance=1.4, redo=args['redo'],
+                             write=args['write_all'], verbose=args['verbose'])
     return myReport
 
 
 def match_cat(args, cat):
     """Match the input catalogue/image sources to sources in a list of given catalogues"""
+    # Check if catalogues directory exists, create if not
+    get_catalogues_dir(main_dir=args.get('main_dir'), create=True, verbose=args.get('verbose', False))
+
     # Process each catalogue object according to list of input catalogue config files.
     # This will cut out a box, cross-match to this instance, and derive the spectral index.
     for config_file in args['config_files']:
@@ -302,5 +314,10 @@ def main(script, argv):
     validate_cat(args, cat, image, myReport)
 
 
-if __name__ == "__main__":
+def cli_entry():
+    """Console script entry point for continuum-validate."""
     main(sys.argv[0], sys.argv[1:])
+
+
+if __name__ == "__main__":
+    cli_entry()
