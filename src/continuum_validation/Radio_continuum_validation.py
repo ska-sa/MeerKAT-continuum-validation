@@ -77,12 +77,12 @@ from docopt import docopt
 
 try:
     from .catalogue import catalogue
-    from .functions import parse_string, new_path, changeDir, find_file, config2dic, get_catalogues_dir
+    from .functions import parse_string, new_path, changeDir, find_file, config2dic
     from .radio_image import radio_image
     from .report import report
 except ImportError:
     from catalogue import catalogue
-    from functions import parse_string, new_path, changeDir, find_file, config2dic, get_catalogues_dir
+    from functions import parse_string, new_path, changeDir, find_file, config2dic
     from radio_image import radio_image
     from report import report
 
@@ -254,8 +254,6 @@ def filter_sources(suffix, args, cat, image):
 
 def match_cat(args, cat):
     """Match the input catalogue/image sources to sources in a list of given catalogues"""
-    # Check if catalogues directory exists, create if not
-    get_catalogues_dir(main_dir=args.get('main_dir'), create=True, verbose=args.get('verbose', False))
 
     # Process each catalogue object according to list of input catalogue config files.
     # This will cut out a box, cross-match to this instance, and derive the spectral index.
