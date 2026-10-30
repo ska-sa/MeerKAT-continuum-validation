@@ -798,8 +798,12 @@ def new_path(filepath):
 
 def find_file(filepath, main_dir, verbose=True):
 
-    """Look for a file in specific paths. Look one directory up if filepath is relative,
-    otherwise look in main directory, otherwise raise exception.
+    """Look for a file in specific paths:
+    1. Exact or relative path
+    2. Package bundled resources (data/configs/ or data/)
+    3. Main directory / catalogues subfolder
+    4. Main directory directly
+    5. Parent directory (new_path)
 
     Arguments:
     ----------
@@ -813,20 +817,47 @@ def find_file(filepath, main_dir, verbose=True):
     filepath : string
         The path to where the file was found."""
 
-    # Raise exception if file still not found
-    if not (os.path.exists(filepath) or os.path.exists('{0}/{1}'.format(main_dir, filepath))
-            or os.path.exists(new_path(filepath))):
-        raise Exception("Can't find file - {0}. Ensure this file is in input "
-                        "path or --main-dir.\n".format(filepath))
-    # Otherwise update path to where file exists
-    elif not os.path.exists(filepath):
-        # Look in main directory if file doesn't exist in relative filepath
-        if os.path.exists('{0}/{1}'.format(main_dir, filepath)):
-            if verbose:
-                print("Looking in '{0}' for '{1}'.".format(main_dir, filepath))
-            filepath = '{0}/{1}'.format(main_dir, filepath)
-        # Update directory path if file is relative path
-        else:
-            filepath = new_path(filepath)
+    if os.path.exists(filepath):
+        return filepath
 
-    return filepath
+    # Check packaged configs/data resources
+    try:
+        from importlib.resources import files
+        fname = os.path.basename(filepath)
+        pkg_cfg = files('continuum_validation.data.configs').joinpath(fname)
+        if pkg_cfg.is_file():
+            if verbose:
+                print("Found '{0}' in package configs.".format(fname))
+            return str(pkg_cfg)
+        pkg_data = files('continuum_validation.data').joinpath(fname)
+        if pkg_data.is_file():
+            if verbose:
+                print("Found '{0}' in package data.".format(fname))
+            return str(pkg_data)
+    except Exception:
+        pass
+
+    # Check catalogues directory across multiple candidate locations
+    pkg_cat_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'catalogues'))
+    candidate_cat_dirs = [
+        os.path.join(main_dir, 'catalogues'),
+        main_dir,
+        pkg_cat_dir,
+        'catalogues',
+    ]
+    for cdir in candidate_cat_dirs:
+        cat_file = os.path.join(cdir, filepath)
+        if os.path.exists(cat_file):
+            if verbose:
+                print("Looking in '{0}' for '{1}'.".format(cdir, filepath))
+            return cat_file
+
+    # Check one directory up
+    up_path = new_path(filepath)
+    if os.path.exists(up_path):
+        return up_path
+
+    # Raise exception if file still not found
+    raise Exception("Can't find file - {0}. Ensure this file is in input "
+                    "path, package resources, or --main-dir.\n".format(filepath))
+
