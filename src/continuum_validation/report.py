@@ -19,10 +19,7 @@ import plotly.figure_factory as ff
 import plotly.colors as pc
 from plotly.figure_factory._quiver import _Quiver
 
-try:
-    from .functions import get_stats, flux_at_freq, get_pixel_area, axis_lim
-except ImportError:
-    from functions import get_stats, flux_at_freq, get_pixel_area, axis_lim
+from .functions import get_stats, flux_at_freq, get_pixel_area, axis_lim
 
 # ignore annoying astropy warnings and set my own obvious warning output
 warnings.simplefilter('ignore', category=AstropyWarning)

@@ -11,10 +11,7 @@ from astropy.io.votable import parse_single_table
 from astropy.table import Table
 from astropy.utils.exceptions import AstropyWarning
 
-try:
-    from .functions import config2dic, flux_at_freq, SED, two_freq_power_law, axis_lim
-except ImportError:
-    from functions import config2dic, flux_at_freq, SED, two_freq_power_law, axis_lim
+from .functions import config2dic, flux_at_freq, SED, two_freq_power_law, axis_lim
 
 
 # Ignore annoying astropy warnings and set my own obvious warning output

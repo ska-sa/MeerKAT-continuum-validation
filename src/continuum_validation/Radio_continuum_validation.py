@@ -75,16 +75,10 @@ from inspect import currentframe, getframeinfo
 import matplotlib as mpl
 from docopt import docopt
 
-try:
-    from .catalogue import catalogue
-    from .functions import parse_string, new_path, changeDir, find_file, config2dic
-    from .radio_image import radio_image
-    from .report import report
-except ImportError:
-    from catalogue import catalogue
-    from functions import parse_string, new_path, changeDir, find_file, config2dic
-    from radio_image import radio_image
-    from report import report
+from .catalogue import catalogue
+from .functions import parse_string, new_path, changeDir, find_file, config2dic
+from .radio_image import radio_image
+from .report import report
 
 cf = currentframe()
 WARN = '\n\033[91mWARNING: \033[0m' + getframeinfo(cf).filename

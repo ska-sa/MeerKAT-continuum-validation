@@ -8,10 +8,8 @@ from astropy.io import fits as f
 from astropy.utils.exceptions import AstropyWarning
 from astropy.wcs import WCS
 
-try:
-    from .functions import remove_extn, get_pixel_area
-except ImportError:
-    from functions import remove_extn, get_pixel_area
+from .functions import remove_extn, get_pixel_area
+
 import subprocess
 import shlex
 
