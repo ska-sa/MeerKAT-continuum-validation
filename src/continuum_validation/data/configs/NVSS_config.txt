@@ -1,4 +1,4 @@
-filename=NVSS.fits.gz
+filename=NVSS.parquet
 name=NVSS
 frequency=1400
 finder=None
